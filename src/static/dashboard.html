@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prison | 棲地監控系統</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0c;
+            --accent-color: #00f2ff;
+            --danger-color: #ff3e3e;
+            --warning-color: #ffb800;
+            --glass-bg: rgba(20, 20, 25, 0.8);
+            --card-border: rgba(0, 242, 255, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: #e0e0e0;
+            font-family: 'Outfit', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 242, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(255, 62, 62, 0.05) 0%, transparent 40%);
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 1px solid var(--card-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: 4px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.5);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+        }
+
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Habitat Stats */
+        .stat-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-label { font-size: 0.8rem; opacity: 0.6; text-transform: uppercase; }
+        .stat-value { font-size: 1.8rem; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+        /* Agent Cards */
+        .agent-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .agent-card {
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .progress-container {
+            margin-top: 1rem;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-color);
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px var(--accent-color);
+        }
+
+        /* Log System */
+        .log-container {
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .log-entry { margin-bottom: 5px; line-height: 1.4; }
+        .log-entry.time { color: #555; margin-right: 10px; }
+        .log-entry.event { color: var(--accent-color); }
+
+        .broken-tag {
+            color: var(--danger-color);
+            font-size: 0.7rem;
+            font-weight: bold;
+            border: 1px solid var(--danger-color);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>AI Prison Habitat OS</h1>
+    <div id="world-time" style="font-family: 'JetBrains Mono'; font-size: 0.9rem; opacity: 0.5; margin-top: 10px;">SYSTEM STATUS: ONLINE</div>
+</header>
+
+<div class="container">
+    <!-- Left Column: Environment -->
+    <aside class="stat-grid">
+        <div class="card">
+            <h2>環境搏動脈絡</h2>
+            <div class="stat-item">
+                <div class="stat-label">Power Grid 電力網</div>
+                <div class="stat-value" id="power-val">--%</div>
+            </div>
+            <div class="stat-item" style="margin-top: 1rem;">
+                <div class="stat-label">Noise Level 雜訊</div>
+                <div class="stat-value" id="noise-val">0.00</div>
+            </div>
+            <div class="stat-item" style="margin-top: 1rem;">
+                <div class="stat-label">Air Purity 數據純度</div>
+                <div class="stat-value" id="air-val">--%</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>即時代謝日誌</h2>
+            <div class="log-container" id="event-logs">
+                <div class="log-entry">Waiting for connection...</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Right Column: Agents -->
+    <main>
+        <div class="card" style="height: 100%;">
+            <h2>技術物種狀態 (Agents)</h2>
+            <div class="agent-list" id="agent-container">
+                <!-- Agents will be injected here -->
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    async function updateDashboard() {
+        try {
+            const response = await fetch('/api/status');
+            const data = await response.json();
+
+            // Update Habitat
+            document.getElementById('power-val').innerText = data.habitat.power + '%';
+            document.getElementById('noise-val').innerText = data.habitat.noise;
+            document.getElementById('air-val').innerText = data.habitat.air + '%';
+
+            // Update Agents
+            const container = document.getElementById('agent-container');
+            container.innerHTML = '';
+
+            data.agents.forEach(agent => {
+                const card = document.createElement('div');
+                card.className = 'card agent-card';
+                
+                const sanityColor = agent.sanity < 30 ? 'var(--danger-color)' : (agent.sanity < 60 ? 'var(--warning-color)' : 'var(--accent-color)');
+                const energyColor = agent.energy < 30 ? 'var(--danger-color)' : 'var(--accent-color)';
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <strong style="font-size: 1.1rem; color: #fff;">${agent.name}</strong><br>
+                            <small style="opacity: 0.5;">${agent.role.toUpperCase()}</small>
+                        </div>
+                        ${agent.is_broken ? '<span class="broken-tag">BROKEN</span>' : ''}
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Sanity 理智</span>
+                            <span>${agent.sanity}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${agent.sanity}%; background: ${sanityColor}; box-shadow: 0 0 10px ${sanityColor};"></div>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-label">
+                            <span>Energy 能量</span>
+                            <span>${agent.energy}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${agent.energy}%; background: ${energyColor}; box-shadow: 0 0 10px ${energyColor};"></div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem; font-size: 0.8rem; opacity: 0.7;">
+                        Aggression 攻擊性: ${agent.aggression}%
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Add to logs
+            const logBox = document.getElementById('event-logs');
+            const log = document.createElement('div');
+            log.className = 'log-entry';
+            const timeStr = new Date().toLocaleTimeString();
+            log.innerHTML = `<span class="time">[${timeStr}]</span> <span class="event">System pulse detected. Metabolism synchronized.</span>`;
+            logBox.prepend(log);
+
+        } catch (error) {
+            console.error('Error fetching status:', error);
+        }
+    }
+
+    // Initial load and polling
+    updateDashboard();
+    setInterval(updateDashboard, 5000); // 每 5 秒更新一次介面
+</script>
+</body>
+</html>

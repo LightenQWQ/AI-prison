@@ -1,0 +1,16 @@
+services:
+  workspace:
+    container_name: ai-prison-workspace
+    build: .
+    image: ai-prison-env
+    volumes:
+      - .:/workspace
+    ports:
+      - "8000:8000"
+    working_dir: /workspace
+    command: sh -c "uv pip install fastapi uvicorn jinja2 && uv run src/server.py"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G

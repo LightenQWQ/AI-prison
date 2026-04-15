@@ -1,0 +1,5 @@
+.env
+.lancedb/
+__pycache__/
+*.pyc
+.venv/
