@@ -44,7 +44,9 @@
 | Date | Scope | Decision | Confidence | Provenance | Review_after | Status | Conflict_with | Superseded_by |
 |---|---|---|---|---|---|---|---|---|
 | 2026-04-15 | infra | Defined Project Roles: System_Architect/Specialist | high | Generator | - | Active | - | - |
-
+| 2026-04-16 | web | Integrated LLM Jury for automated crime parsing on entry | high | [VERIFIED] Local tests | - | Active | - | - |
+| 2026-04-16 | web | Introduced lawful release (sentence exhaustion) as A2A exit | high | [ASSUMED] Logic bounds | - | Active | - | - |
+| 2026-04-16 | infra | Mandated `uv venv` creation within Docker to bypass PEP 668 | high | [VERIFIED] Docker logs | - | Active | - | - |
 ## 🔐 Environment Variables Protocol
 - All secrets MUST live in `.env` (never hardcode in source).
 - `.env.example` is the template — it contains only keys, no real values.
