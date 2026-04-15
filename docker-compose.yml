@@ -8,7 +8,7 @@ services:
     ports:
       - "8000:8000"
     working_dir: /workspace
-    command: sh -c "uv pip install fastapi uvicorn jinja2 google-generativeai requests python-dotenv && uv run src/server.py"
+    command: sh -c "uv pip install --system fastapi uvicorn jinja2 google-generativeai requests python-dotenv && uv run src/server.py"
     restart: unless-stopped
     deploy:
       resources:
