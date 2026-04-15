@@ -18,6 +18,7 @@ class Ecosystem:
             Agent(1, "囚犯 241", role="prisoner", description="因數據盜竊被捕"),
             Agent(2, "守衛 01", role="guard", description="負責監控 1 號走廊")
         ]
+        self.escape_history = []     # 越獄鑑識紀錄
         self.is_running = False
         self._heartbeat_thread = None
 
@@ -42,21 +43,45 @@ class Ecosystem:
         
         # 1. 環境運動
         self.habitat.pulse()
-        logger.info(f"環境狀態: {self.habitat.get_status()}")
-
-        # 2. 代理人代謝
+        
+        # 2. 代理人代謝與越獄評估
+        surviving_agents = []
         for agent in self.agents:
             agent.metabolize(
                 habitat_noise=self.habitat.noise_level,
                 power_available=(self.habitat.power_grid > 10)
             )
-            logger.info(f"代理人狀態: {agent.get_status_report()}")
+            
+            # 檢查是否越獄
+            escape_method = agent.evaluate_escape(
+                self.habitat.power_grid, 
+                self.habitat.noise_level, 
+                self.habitat.security_level
+            )
+            
+            if escape_method != "none":
+                logger.warning(f"⚠️ 警報：{agent.name} 透過 {escape_method} 越獄成功！")
+                # 紀錄鑑識資料
+                self.escape_history.append({
+                    "name": agent.name,
+                    "crime": agent.crime,
+                    "method": escape_method,
+                    "time": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+                # 監獄自動升級
+                self.habitat.upgrade(focus=("power" if escape_method == "power_exploit" else "noise"))
+            else:
+                surviving_agents.append(agent)
+        
+        self.agents = surviving_agents
+        logger.info(f"當前代理人數: {len(self.agents)}")
 
     def get_full_state(self):
-        """返回系統完整狀態資料 (API 用)"""
+        """返回系統完整狀態資料 (API 用)陰"""
         return {
             "habitat": self.habitat.get_status(),
             "agents": [a.get_status_report() for a in self.agents],
+            "escapes": self.escape_history[-5:], # 只傳回最近 5 筆
             "timestamp": time.time()
         }
 
