@@ -101,7 +101,7 @@ async def game_suggest(req: SuggestionRequest):
                 "new_fear": req.current_fear,
                 "new_trust": req.current_trust,
                 "response_text": "我在哪裡... 為什麼我的聲音在我的腦海裡？",
-                "image_url": "assets/starter_waking_up.png",
+                "image_url": "assets/starter_v3.png",
                 "response_desc": "(角色緊盯著角落，呼吸微微促促)",
                 "new_inventory": req.inventory,
                 "new_flags": req.flags
