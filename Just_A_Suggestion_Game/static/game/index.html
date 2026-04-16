@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《只是一個建議》前導測試版</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- 狀態列 -->
+        <header id="status-bar">
+            <div class="stat">
+                <label>信任值</label>
+                <div class="bar-bg"><div id="trust-bar" class="bar-fill trust"></div></div>
+            </div>
+            <div class="stat">
+                <label>恐懼值</label>
+                <div class="bar-bg"><div id="fear-bar" class="bar-fill fear"></div></div>
+            </div>
+        </header>
+
+        <!-- 物品欄 -->
+        <div id="inventory-bar">
+            <span>持有物品:</span>
+            <div id="inventory-items">
+                <span class="empty-inventory">無</span>
+            </div>
+        </div>
+
+        <!-- 視覺呈現 (黑白漫畫分鏡) -->
+        <div id="scene-display">
+            <img id="scene-image" src="intro_panel.png" alt="Noir manga panel">
+            <div id="vignette"></div>
+            <!-- 黑白雜訊疊加層模擬不穩定的 AI 畫面 -->
+            <div id="noise-overlay"></div>
+        </div>
+
+        <!-- 文字對話框 -->
+        <div id="dialogue-box">
+            <p id="npc-text">「...你是誰？為什麼你的聲音在我的腦海裡？」<br><span class="desc">(角色緊盯著角落，呼吸微微急促)</span></p>
+        </div>
+
+        <!-- 玩家輸入區 -->
+        <div id="input-area">
+            <input type="text" id="suggestion-input" placeholder="輸入你的建議，例如：冷靜一點、轉身看看牆角..." autocomplete="off">
+            <button id="submit-btn">傳達</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

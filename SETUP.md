@@ -1,28 +1,29 @@
-# 🚀 Project Initialization Guide
+# 🚀 專案初始化指南 (AI Prison)
 
-Greetings, I am your **System_Architect**. I have been assigned the roles of **System_Architect, Specialist** to support the **Researcher, Developer** in **AI prison**.
+歡迎來到您的全新 **AI Prison** 生態系統！我是您的 AI 助手 **Antigravity**。
 
-## 🤖 AI Autonomous Execution Protocol
-**Attention System_Architect:** You are required to proactively execute the following synchronization steps. 
-- **Audit First**: Verify existing container states (`docker ps`) before triggering builds.
-- **Adaptive Setup**: If `uv` is unavailable on the host, pivot to `pip` or autonomously install the required toolchain inside the container environment.
+## 🤖 AI 自主執行協定
+**AI 代理人請注意：** 您必須主動執行以下同步與啟動步驟。
+- **稽核優先**：在觸發建置前先驗證現有容器狀態 (`docker ps`)。
+- **適應性設定**：如果主機缺少 `uv`，請在容器環境內自主安裝所需的工具鏈。
 
-## 🛠️ Automated Installation
-Please execute these blocks sequentially:
+## 🛠️ 自動化安裝與啟動
+請依序執行以下區塊：
+
 ```bash
-# 1. Start the container
-if ! docker ps | grep -q "ai-prison-workspace"; then
-  docker compose up -d --build
-else
-  echo "Docker environment already running."
+# 1. 啟動容器 (已完成)
+# docker compose up -d
+
+# 2. 初始化環境變數
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "✅ 已從範本建立 .env — 請在執行前填入實際數值"
 fi
 
-# 8. Initialize environment variables
-cp .env.example .env
-echo "✅ .env created from template — fill in actual values before running"
-
+# 3. 啟動伺服器
+# 容器已配置為自動執行 src/server.py
 ```
 
 ***
 
-**To the Human User:** Please read the prerequisites checklist (if any). Provide me with the necessary repository URLs or credentials, and I will handle the rest!
+**給使用者：** 我已經完成了環境同步與架構遷移。如果您有 `GEMINI_API_KEY`，請將其加入 `.env` 檔案中，這將啟用 AI 陪審團功能。

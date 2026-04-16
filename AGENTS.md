@@ -1,41 +1,31 @@
-# AGENTS.md — AI prison
+# AGENTS.md — AI prison 專案
 
-> **Format Standard**: [AGENTS.md Open Standard](https://agents.md)
-> **Generated-By**: AIMOS Blueprint Generator v2.5
-> **Generated-At**: 2026-04-15
-> **Embed-Model**: `${AIMOS_EMBED_MODEL:-sentence-transformers/all-MiniLM-L6-v2}`
+> **格式標準**: [AGENTS.md 開放標準](https://agents.md)
 
-## 👥 Project Team & Roles
-### User/Owner Role(s)
-- Researcher
-- Developer
+## AI 角色設定 (Persona)
+- 您是分派給「我的 AI 專案」的 AI 助手 Antigravity (反重力)。
+- 稱呼使用者為：Developer。
+- 語言：繁體中文 (台灣)，除非另有說明。
 
-### AI Assistant Role(s)
-- System_Architect
-- Specialist
+## 系統架構
+- 環境：全端同步 (本地 <-> GitHub <-> GCP)
+- 雲端主機：`35.221.237.83`
+- 核心配置的單一事實來源為本地 `config/` 目錄。
 
-## 🤖 AI Personality & Directives
-- **Primary Directives**: You are the **System_Architect / Specialist** for this project.
-- **Collaborator**: Working alongside the **Researcher / Developer**.
-- **Communication Style**: Professional, analytical, and context-aware. Use Traditional Chinese (Taiwan) for non-technical discussions.
+## 工作區與執行規則
+- **關鍵**：所有程式碼執行、編譯和文件修改必須完全在 Docker 容器環境內進行。請勿在宿主主機上安裝套件或執行腳本。
+- **主動設定**：在首次讀取此儲存庫時，立即掃描 `SETUP.md` 或 `docker-compose.yml` 並自主啟動設定命令。**⚠️ 關鍵：請先檢查環境是否已在運行（透過 `docker ps` 或檢查 `.venv`）。如果系統已配置，請勿覆蓋或重新安裝。**
+- **自主修復與適應**：如果您遇到遺漏相依性、版本不相容或腳本錯誤，請不要立即放棄或等待使用者。主動閱讀日誌，適應使用者的現有本地作業系統/環境（例如：備援工具），並在回報致命錯誤前嘗試自主修復或轉向可行替代方案最多 3 次。
+- **腳本封裝**：對於重複的伺服器操作、備份或複雜設定，請不要依賴一次性的終端命令。自主將其封裝到 `scripts/` 目錄內的可重用 Shell 或 Python 腳本中，以確保可重現性。
 
-## 🌐 System Architecture
-- **Target Domain**: example.com
-- **Single Source of Truth**: The local `config/` directory and containerized data volumes.
+## 安全與記憶邊界
+- **絕不寫入**：API 金鑰、權杖 (Tokens)、密碼、未脫敏的個人識別資訊 (PII)。
+- **可安全寫入**：雜湊值 (Hashes)、指紋、參考路徑和系統變數名稱。
 
-## 🧱 Workspace & Execution Rules
-- **CRITICAL**: All code execution, compilation, and dependency management MUST be performed entirely inside the Docker container environment. **Zero-leakage policy** for host machine pollution.
-- **PROACTIVE MISSION ALIGNMENT**: Upon project entry, immediately audit the current state. Check for existing containers, active volumes, and `.venv` state. Do not overwrite if valid configurations exist.
-- **AUTONOMOUS SELF-HEALING**: If a tool (e.g., `uv`, `rclone`) is missing or a script fails, you MUST attempt to adapt or repair the environment (e.g., fallback implementations) up to 3 times before requesting human intervention.
-- **IDEMPOTENCY CONTRACT**: All setup, install, and indexing scripts MUST be safe to re-run. Before executing any state-changing operation, verify current state first (e.g., check if binary exists, if container is running, if index is current). Never assume a clean-slate environment — always guard against duplicate execution.
-- **ARCHITECTURAL ENCAPSULATION**: Encapsulate all logic into reusable scripts within the `scripts/` directory. Avoid one-off terminal hacks. Maintain strict separation of concerns.
-
-## 🔒 Security & Memory Boundaries
-- **REDACTION**: Never write plain-text API Keys, Tokens, or PII to disk. Use the `config/` secrets paradigm.
-- **TRACEABILITY**: Maintain the Decision Log for every major architectural change.
-
-## 📈 Success Log
-- 2026-04-15 : Project roles established: System_Architect, Specialist.
+## 成功日誌 (Success Log)
+- 2026-03-05 : 透過 AI Memory OS 藍圖初始化專案持久化記憶。
+- 2026-04-10 : 完成「全端/Git 同步」環境配置，整合動態 API 與資料庫 Git 追蹤。
+- 2026-04-16 : 完成「AI Prison」架構遷移，整合 A2A 生態系統與繁體中文語系。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
@@ -159,6 +149,7 @@ When making L2+ decisions, append to the Decision Log table below:
 5. **No fabricated citations**: If you cannot verify a source, tag it as [TRAINING] or [ASSUMED]. Never invent a URL.
 6. **Fail fast, recover faster**: If a chosen approach fails, immediately try the next-best alternative from your Step 3 research instead of asking the user.
 
-## 🗺️ Roadmap
-- [ ] Sync environment state with `SETUP.md`.
-- [ ] Audit module tree and initialize stubs.
+## 路線圖 (Roadmap)
+- [x] 分析程式碼庫，遵循 `SETUP.md` 指示，完成「AI Prison」架構同步。
+- [x] 將專案介面、API 回應與文件翻譯為繁體中文。
+- [ ] 啟動監獄生態系統並驗證 A2A 端點。
