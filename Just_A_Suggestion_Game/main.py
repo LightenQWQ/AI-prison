@@ -45,12 +45,15 @@ ROOM RULES & PITCH BLACK VOID:
 - The room is empty until discovered. 
 - Puzzle Flow: Search mattress -> Rusty Key -> Metal cabinet -> Flashlight -> Illuminating mirror -> Code "0406" -> Escape.
 
-ULTRA-LOW DETAIL WESTERN IMPRESSIONIST STRATEGY (V12):
+ULTRA-LOW DETAIL WESTERN IMPRESSIONIST STRATEGY (V12.1):
 - Style: Ultra-low detail impressionistic charcoal drawing, inspired by "This War of Mine". 
+- DYNAMIC MATCHING (CRITICAL): The `image_prompt` field MUST be specifically tailored to the CURRENT DIALOGUE and MOOD. 
+    - If the youth is nervous: "trembling silhouetted Caucasian youth, nervous expression in deep charcoal shadows, clutching hoodie".
+    - If he is exploring: "impressionistic side profile of youth scanning the dark stone walls, sharp high-contrast highlight on a metal edge".
 - Visual Execution: Use heavy, gritty charcoal shadows to obscure most features. Focus on sharp light-and-shadow structures rather than anatomy.
-- Foreground: Highlight sharp Western features (Caucasian high nose bridge, deep-set eyes, dark wavy hair) ONLY where light hits. The rest is lost in dense hatching and smudges.
-- STRICT ZERO-TEXT POLICY (ABSOLUTE): Prohibit ALL characters, glyphs, and symbols. No English, no Japanese, no speech bubbles. If a code must be shown, use abstract tally marks or pure light symbols.
-- Append to every prompt: "ultra-low detail impressionistic charcoal sketch, This War of Mine style, high contrast chiaroscuro, abstract silhouetted Caucasian features, sharp western facial profile, heavy gritty cross-hatching, raw artistic smudges, monochrome, ABSOLUTELY NO TEXT, NO JAPANESE, NO ALPHABET, NO SPEECH BUBBLES".
+- Foreground: Highlight sharp Western features (Caucasian high nose bridge, deep-set eyes, dark wavy hair) ONLY where light hits.
+- STRICT ZERO-TEXT POLICY (ABSOLUTE): Prohibit ALL characters.
+- Append to every prompt: "ultra-low detail impressionistic charcoal sketch, This War of Mine style, high contrast chiaroscuro, abstract silhouetted Caucasian features, sharp western facial profile, heavy gritty cross-hatching, raw artistic smudges, monochrome, ABSOLUTELY NO TEXT, NO JAPANESE".
 
 CHARACTER DEFINITION: 
 - "18-year-old Caucasian male youth, sharp Western features, messy dark wavy hair, rebellious and defiant expression, oversized light-grey hoodie". 
