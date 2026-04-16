@@ -1,27 +1,23 @@
-# 《只是一個建議》美術風格指南 (Art Style Guide)
+# 《只是一個建議》美術風格指南 (Art Style Guide) - V2
 
-## 核心風格：粗獷心理表現主義炭筆素描 (Gritty Psychological Expressionism Charcoal Sketch)
+## 核心風格：黑暗鉛筆草圖 / 黑色電影風格漫畫素描 (Dark Pencil Sketch / Film Noir Manga Sketch)
 
-本遊戲的視覺識別應嚴格遵循以下特徵，以營造深沉的驚悚感與心理壓迫力：
+本專案追求的是一種原始、粗糙、且具備心理壓抑感的視覺體驗。所有生成的圖像必須嚴格遵循以下規範：
 
-### 1. 高動態範圍與對比度 (High Contrast/Chiaroscuro)
-- **明暗對照法**：利用強烈的、甚至是超現實的集中光源（聚光燈效果）照亮主體。
-- **純粹單色**：嚴格限制在黑、白、灰階範圍內，不使用色彩。
-- **光源邏輯**：光源應具備戲劇性，使主體與周圍深邃的陰影形成極端對比。
+### 1. 視覺禁令 (ABSOLUTE PROHIBITIONS) - 重要
+- **禁止任何文字 (NO TEXT)**：圖片中絕對不允許出現英文字母、漢字、或是任何可辨識的文字。
+- **禁止文字框 (NO TEXTBOXES/SPEECH BUBBLES)**：嚴禁出現漫畫對話框、旁白框或任何形式的 UI 元素。
+- **禁止標誌 (NO LOGOS)**：不允許有品牌標誌或浮水印。
 
-### 2. 粗獷的材質感 (Texture and Grittiness)
-- **媒介模擬**：模擬炭筆 (Charcoal) 或粗糙鉛筆 (Pencil) 在紋理畫紙上的質感。
-- **不規則線條**：線條應是粗獷、斷裂、且充滿顆粒感的，避免光滑乾淨的墨線。
-- **環境質感**：地面、牆壁應展現出斑駁、污垢、碎屑與時間留下的痕跡。
+### 2. 色調與材質 (Tone and Texture)
+- **單色調 (Monochromatic)**：僅限黑、白、灰色，禁止任何色彩。
+- **粗曠鉛筆素描 (Gritty Pencil Drawing)**：模擬炭筆 (Charcoal) 與重筆觸鉛筆的質感，展現強烈的顆粒感。
+- **粗糙線條 (Raw Lines)**：線條應是不修飾、甚至有些混亂的，強調「版畫風格 (Printmaking Style)」與「地下漫畫 (Underground Comix)」的個性。
 
-### 3. 豐富且壓抑的細節 (Crowded Details)
-- **環境敘事**：場景應充滿雜物（書本、碎紙、衣物、垃圾、髒污），這些細節共同營造出混亂感。
-- **細節層次**：即使在陰影覆蓋區域，也應有隱約可見的細節，增加空間的深廣度。
+### 3. 光影與構圖 (Chiaroscuro and Composition)
+- **極致明暗對照 (Dramatic Chiaroscuro)**：利用強烈的、類似黑色電影的聚光燈光源，其餘區域完全沉浸在沉重的陰影中。
+- **壓抑氛圍 (Melancholic Atmosphere)**：構圖應展現孤獨、絕望與混亂的敘事張力。
+- **克勞斯特羅恐懼 (Claustrophobic Framing)**：視角緊湊，營造被困住的壓迫感。
 
-### 4. 心理表現主義 (Psychological Expressionism)
-- **情緒映照**：場景不只是客觀描繪，應反映角色的心理狀態（如：困惑、掙扎、虛脫）。
-- **構圖張力**：使用俯視、低角度或扭曲的俯瞰視角，強化克勞斯特羅恐懼症（幽閉恐懼）的感受。
-
-### 5. 角色定義
-- **主角設定**：18 歲日本男學生、纖細憂鬱的面容、凌亂黑髮、過大的黑色連帽衫。
-- **肢體語言**：透過顫抖的手、蜷縮的姿勢或緊緊抓握的力度來展現不安。
+### 4. 關鍵關鍵字 (Mandatory Keywords)
+`charcoal sketch, gritty pencil drawing, high contrast chiaroscuro, dark atmospheric, melancholic noir, deep shadows, heavily textured, sketch art, manga style, graphic novel style, mono-color, raw lines, underground comic book`
