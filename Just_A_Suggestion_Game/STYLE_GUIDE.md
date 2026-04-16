@@ -21,3 +21,12 @@
 
 ### 4. 關鍵關鍵字 (Mandatory Keywords)
 `charcoal sketch, gritty pencil drawing, high contrast chiaroscuro, dark atmospheric, melancholic noir, deep shadows, heavily textured, sketch art, manga style, graphic novel style, mono-color, raw lines, underground comic book`
+
+### 5. 角色定義 (Canonical Character Definition)
+- **主角原型**：18 歲日本男學生、**憂鬱且深綴的雙眼 (Melancholic sad eyes)**、清秀但帶有疲憊感。
+- **髮型**：**凌亂且具有尖刺感的黑髮 (Messy spiky black hair)**。
+- **服裝**：
+    - **淺灰色** 寬大連帽上衣 (Light-grey oversized hoodie)，附有抽繩與明顯的腹部口袋。
+    - 深色直筒長褲 (Dark jeans)。
+    - 黑白配色的**帆布鞋 (Canvas sneakers)**。
+

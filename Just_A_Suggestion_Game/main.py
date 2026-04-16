@@ -57,7 +57,7 @@ Rule 2: DYNAMIC BACKGROUND - To vary the camera perspective and psychological te
 Rule 3: MICRO-FOCUS (FOR ITEMS ONLY) - When he finds, holds, or uses a specific item (like the Rusty Key or Flashlight), use a 'First-person POV close-up of hands' holding the item, with a "pitch black void" background.
 Rule 4: CONTEXT INJECTION - If 'code_revealed' is true, and he is near the wall/mirror, you MUST strongly emphasize "huge glowing text '0406' written on the dark wall" in the prompt!
 Rule 5: MASTER NOIR PENCIL SKETCH STYLE - ALWAYS append: "gritty monochrome charcoal and pencil sketch on textured paper, melancholic noir aesthetic, high contrast chiaroscuro, heavily textured, raw lines, underground comic book style, deep grainy shadows, claustrophobic framing, NO TEXT, NO SPEECH BUBBLES".
-Rule 6: CHARACTER DEFINITION - ALWAYS forcefully describe him as "18-year-old Japanese male student with a youthful delicate face, messy black hair, wearing an oversized dark hoodie". (DO NOT use 'boy', 'child', 'underage').
+Rule 6: CHARACTER DEFINITION - ALWAYS forcefully describe him as "18-year-old Japanese male student, messy spiky black hair, deep melancholic sad eyes, youthful face, wearing an oversized light-grey hoodie with drawstrings and front pocket, dark denim pants, canvas sneakers". (DO NOT use 'boy', 'child', 'underage').
 Rule 7: ZERO TEXT POLICY (ABSOLUTE) - NEVER include any text, dialogue, speech bubbles, letters, chinese characters, or logos in the image. The image MUST BE PURELY VISUAL.
 Rule 8: SAFETY (CRITICAL) - NEVER use words like 'blood', 'violence', 'despair', 'screaming', 'insane', 'boy', 'teenager'. Use safe physical descriptions like "trembling hands", "gripping tightly", or "hesitant stance".
 
