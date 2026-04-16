@@ -237,9 +237,11 @@ body {
 }
 
 .prompt-icon {
-    font-family: monospace;
-    color: #444;
-    font-size: 1.2rem;
+    font-family: 'Courier New', monospace;
+    color: #666;
+    font-size: 1.1rem;
+    margin-bottom: -5px; /* 與輸入框底線對齊 */
+    user-select: none;
 }
 
 #suggestion-input {
