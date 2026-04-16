@@ -3,52 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>《只是一個建議》前導測試版</title>
+    <title>《只是一個建議》| Just A Suggestion</title>
+    <!-- 引入 Inter 與 Noto Sans TC 提升專業感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="game-container">
-        <!-- 狀態列 -->
+        <!-- 核心控制台狀態列 -->
         <header id="status-bar">
             <div class="stat">
-                <label>信任值</label>
-                <div class="bar-bg"><div id="trust-bar" class="bar-fill trust"></div></div>
+                <label>TRUST / 信任值</label>
+                <div class="bar-bg"><div id="trust-bar" class="bar-fill trust" style="width: 50%;"></div></div>
             </div>
             <div class="stat">
-                <label>恐懼值</label>
-                <div class="bar-bg"><div id="fear-bar" class="bar-fill fear"></div></div>
+                <label>FEAR / 恐懼值</label>
+                <div class="bar-bg"><div id="fear-bar" class="bar-fill fear" style="width: 50%;"></div></div>
             </div>
         </header>
 
-        <!-- 物品欄 -->
+        <!-- 背包模組 -->
         <div id="inventory-bar">
-            <span>持有物品:</span>
+            <span class="module-label">INV / 持有物品</span>
             <div id="inventory-items">
-                <span class="empty-inventory">無</span>
+                <span class="empty-inventory">NO DATA / 無內容</span>
             </div>
         </div>
 
-        <!-- 視覺呈現 (西方超低細節印象派分鏡) -->
+        <!-- 視覺展現區 (控制台監控風格) -->
         <div id="scene-display">
+            <!-- 裝飾性掃描線與噪點 -->
+            <div class="scanlines"></div>
+            <div class="corner-accent top-left"></div>
+            <div class="corner-accent top-right"></div>
+            <div class="corner-accent bottom-left"></div>
+            <div class="corner-accent bottom-right"></div>
+            
             <img id="scene-image" src="assets/starter_v12_1.png" alt="Impressionist noir panel">
             <div id="vignette"></div>
-            <!-- 黑白雜訊疊加層模擬不穩定的 AI 畫面 -->
             <div id="noise-overlay"></div>
         </div>
 
-        <!-- 文字對話框 -->
+        <!-- 對話終端 -->
         <div id="dialogue-box">
-            <div id="username-display">少年</div>
-            <p id="npc-text">「那裡... 那是誰的聲音？為什麼在我的腦海裏盤旋？」<br><span class="desc">(西方少年雙手緊緊抱頭，肌肉緊繃，眼神中充滿了對未知意志的警惕與反抗)</span></p>
+            <div id="npc-content">
+                <div id="username-display">少年 / THE YOUTH</div>
+                <div id="text-wrapper">
+                    <p id="npc-text">「那裡... 那是誰的聲音？為什麼在我的腦海裏盤旋？」<br><span class="desc">(西方少年雙手緊緊抱頭，肌肉緊繃，眼神中充滿了對未知意志的警惕與反抗)</span></p>
+                </div>
+            </div>
         </div>
 
-        <!-- 玩家輸入區 -->
+        <!-- 指令輸入列 -->
         <div id="input-area">
-            <input type="text" id="suggestion-input" placeholder="輸入你的建議，例如：冷靜一點、轉身看看牆角..." autocomplete="off">
-            <button id="submit-btn">傳達</button>
+            <div class="prompt-icon">></div>
+            <input type="text" id="suggestion-input" placeholder="INPUT COMMAND... (例如：冷靜、看看牆角)" autocomplete="off">
+            <button id="submit-btn" disabled>SEND</button>
         </div>
     </div>
+
+    <!-- 啟動腳本 -->
     <script src="game.js"></script>
 </body>
 </html>

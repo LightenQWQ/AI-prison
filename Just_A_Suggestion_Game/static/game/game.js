@@ -16,15 +16,15 @@ function updateBars() {
     fearBar.style.width = currentFear + '%';
     trustBar.style.width = currentTrust + '%';
     
-    // Fear effect on screen (visual feedback of psychological state)
+    // Fear effect on screen (Noir-Console dynamic feedback)
     if (currentFear > 80) {
-        sceneImage.style.filter = 'grayscale(100%) contrast(220%) brightness(0.5)';
-        document.getElementById('noise-overlay').style.opacity = '0.4';
-    } else if (currentFear < 40) {
-        sceneImage.style.filter = 'grayscale(100%) contrast(140%) brightness(0.9)';
+        sceneImage.style.filter = 'grayscale(100%) contrast(250%) brightness(0.4)';
+        document.getElementById('noise-overlay').style.opacity = '0.5';
+    } else if (currentFear < 30) {
+        sceneImage.style.filter = 'grayscale(100%) contrast(110%) brightness(0.95)';
         document.getElementById('noise-overlay').style.opacity = '0.05';
     } else {
-        sceneImage.style.filter = 'grayscale(100%) contrast(180%) brightness(0.6)';
+        sceneImage.style.filter = 'grayscale(100%) contrast(150%) brightness(0.7)';
         document.getElementById('noise-overlay').style.opacity = '0.15';
     }
 }
@@ -32,7 +32,7 @@ function updateBars() {
 function updateInventoryUI() {
     inventoryItemsContainer.innerHTML = '';
     if (inventory.length === 0) {
-        inventoryItemsContainer.innerHTML = '<span class="empty-inventory">無</span>';
+        inventoryItemsContainer.innerHTML = '<span class="empty-inventory">NO DATA / 無內容</span>';
         return;
     }
     
@@ -50,9 +50,9 @@ async function sendSuggestion() {
     const suggestion = inputField.value.trim();
     if (!suggestion) return;
     
-    // User feedback while waiting
+    // User feedback while waiting (Console aesthetic)
     inputField.value = '';
-    npcText.innerHTML = `<span class="desc">（正在推敲你的語氣與建議...）</span>`;
+    npcText.innerHTML = `<span class="desc">（SYSTEM: DECIPHERING SUGGESTION / 正在辨識您的建議...）</span>`;
     isWaiting = true;
     submitBtn.disabled = true;
 
@@ -133,5 +133,6 @@ inputField.addEventListener('keypress', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     updateBars();
     updateInventoryUI();
+    submitBtn.disabled = false; // Enable button once ready
     inputField.focus();
 });
