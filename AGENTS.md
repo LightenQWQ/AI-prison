@@ -26,6 +26,7 @@
 - 2026-03-05 : 透過 AI Memory OS 藍圖初始化專案持久化記憶。
 - 2026-04-10 : 完成「全端/Git 同步」環境配置，整合動態 API 與資料庫 Git 追蹤。
 - 2026-04-16 : 完成「AI Prison」架構遷移，整合 A2A 生態系統與繁體中文語系。
+- 2026-04-16 : 完成「只是一個建議」遊戲雲端部署，解決 Docker 依賴與防火牆衝突，伺服器 IP 核定為 `35.236.173.176`。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
@@ -37,6 +38,7 @@
 | 2026-04-16 | web | Integrated LLM Jury for automated crime parsing on entry | high | [VERIFIED] Local tests | - | Active | - | - |
 | 2026-04-16 | web | Introduced lawful release (sentence exhaustion) as A2A exit | high | [ASSUMED] Logic bounds | - | Active | - | - |
 | 2026-04-16 | infra | Mandated `uv venv` creation within Docker to bypass PEP 668 | high | [VERIFIED] Docker logs | - | Active | - | - |
+| 2026-04-16 | infra | Migrated Cloud Server to new IP: `35.236.173.176` (Port 8000/8001) | high | [VERIFIED] Live connection | - | Active | - | - |
 ## 🔐 Environment Variables Protocol
 - All secrets MUST live in `.env` (never hardcode in source).
 - `.env.example` is the template — it contains only keys, no real values.
