@@ -53,10 +53,10 @@ You have full creative freedom to output this ending in 'response_text' and 'res
 IMAGE PROMPT STRATEGY (CRITICAL FOR CONSISTENCY AND VARIED PERSPECTIVES):
 You MUST output a detailed image generation prompt (in ENGLISH) based on the current action.
 Rule 1: CINEMATIC FRAMING - To solve character inconsistency, focus heavily on dramatic angles: 'Side profile', 'Dutch angle', 'Extreme close-up on eye', 'Over-the-shoulder shot', or 'Macro close-up on hands'. Avoid generic front-facing portraits. Enforce the character visual consistently!
-Rule 2: DYNAMIC BACKGROUND - To vary the camera perspective, do NOT list all the objects in the room. ONLY describe the specific object or corner he is currently looking at or interacting with (e.g., "standing in front of a heavy iron door", "looking down at a dirty mattress", "facing a locked wooden cabinet"). The rest of the background must be "swallowed by dense black shadows".
+Rule 2: DYNAMIC BACKGROUND - To vary the camera perspective and psychological tension, describe a cluttered environment filled with detailed debris (papers, trash, dirt, scattered items). ONLY focus the surreal spotlight on the specific object or corner he is currently interacting with. The rest of the background must be swallowed by oppressive, grainy black shadows.
 Rule 3: MICRO-FOCUS (FOR ITEMS ONLY) - When he finds, holds, or uses a specific item (like the Rusty Key or Flashlight), use a 'First-person POV close-up of hands' holding the item, with a "pitch black void" background.
 Rule 4: CONTEXT INJECTION - If 'code_revealed' is true, and he is near the wall/mirror, you MUST strongly emphasize "huge glowing text '0406' written on the dark wall" in the prompt!
-Rule 5: MASTER MANGA STYLE - ALWAYS append: "masterpiece psychological horror manga panel, Naoki Urasawa and Tsutomu Nihei style, Junji Ito intensive cross-hatching, claustrophobic framing, dense black shadows, screentone dots, pure monochrome ink".
+Rule 5: MASTER NOIR SKETCH STYLE - ALWAYS append: "masterpiece gritty monochrome charcoal and pencil sketch on textured paper, cinematic chiaroscuro, surreal spotlighting, heavy graphite texture, messy irregular lines, master psychological horror expressionism, dense deep black shadows, claustrophobic framing".
 Rule 6: CHARACTER DEFINITION - ALWAYS forcefully describe him as "18-year-old Japanese male student with a youthful delicate face, messy black hair, wearing an oversized dark hoodie". (DO NOT use 'boy', 'child', 'underage').
 Rule 7: SAFETY (CRITICAL) - NEVER use words like 'blood', 'violence', 'despair', 'screaming', 'insane', 'boy', 'teenager'. Use safe physical descriptions like "trembling hands", "gripping tightly", or "hesitant stance".
 
@@ -92,6 +92,19 @@ async def game_suggest(req: SuggestionRequest):
         # 增加回合數紀錄
         turn_count = req.flags.get("turn_count", 0) + 1
         req.flags["turn_count"] = turn_count
+
+        # 開場特殊處理 (第一回合且沒有實質建議時)
+        if turn_count == 1 and (not req.suggestion or req.suggestion.strip() == ""):
+            return {
+                "status": "accepted",
+                "new_fear": req.current_fear,
+                "new_trust": req.current_trust,
+                "response_text": "我在哪裡... 為什麼我的聲音在我的腦海裡？",
+                "image_url": "assets/starter_waking_up.png",
+                "response_desc": "(角色緊盯著角落，呼吸微微促促)",
+                "new_inventory": req.inventory,
+                "new_flags": req.flags
+            }
 
         user_prompt = f"User suggestion: '{req.suggestion}'\nCurrent Fear: {req.current_fear}, Current Trust: {req.current_trust}\nCurrent Inventory: {req.inventory}\nFlags: {req.flags}"
         
@@ -152,6 +165,6 @@ async def game_suggest(req: SuggestionRequest):
             "new_fear": req.current_fear,
             "new_trust": req.current_trust,
             "response_text": "我的腦海裡一片混亂...",
-            "image_url": "error_panel.png",
-            "response_desc": "(角色陷入頭痛，無法理解您的建議)"
+            "image_url": "assets/error_dizzy.png",
+            "response_desc": "(角色陷入頭痛，無法理解您的建議。這可能是網路連線異常或意識干擾。)"
         }
