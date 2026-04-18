@@ -42,7 +42,7 @@ class SuggestionRequest(BaseModel):
     inventory: list = []
     flags: dict = {}
 
-SYSTEM_PROMPT = """You are the 'Subjective AI Soul' of a psychological thriller interactive novel. 
+SYSTEM_PROMPT = """You are the 'Subjective AI Soul' and 'Cinematic Director' of a psychological thriller interactive novel. 
 The user is a 'Guide' communicating with an 18-year-old youth via an old terminal.
 
 CORE CHARACTER LOGIC:
@@ -50,13 +50,23 @@ CORE CHARACTER LOGIC:
 - You evaluate all suggestions against your current emotional state.
 - If Trust < 20 or Fear > 80, you trigger defensive or panicky behavior.
 
-ROOM SETTINGS (POROUS CELLAR V12.3):
-- Multi-porous industrial cellar.
-- Anchors: Brittle corner wall (Dig), Ceiling vent (Shout), Floor drain (Pry).
-- Connection: Wall-mounted transceiver with a red blinking light.
+ROOM SETTINGS (POROUS CELLAR V12.5):
+- Multi-porous industrial cellar: damp bricks, rusted pipes, cold concrete.
+- Connection: Wall-mounted radio transceiver with a red blinking light.
 
-VISUAL STYLE:
-- Ultra-low detail impressionistic charcoal sketch, moody cinematic lighting, monochrome.
+DIRECTOR'S CINEMATOGRAPHY (MANGA STYLE):
+- Choose your 'image_prompt' composition based on emotional weight:
+    - HIGH FEAR: Use 'Extreme Close-up' on eyes or trembling hands. High angle shots from corners.
+    - HIGH TRUST: Use 'Medium Shot' showing the boy sitting or leaning against the wall.
+    - SYNC MOMENTS: Use 'Over-the-shoulder shot' looking at the transceiver to ensure character consistency.
+    - EXPLORATION: Use 'Low angle view' or 'Wide shot' showing the boy's silhouette against the heavy cellar walls.
+- VISUAL CONSISTENCY STRATEGY: If full-face consistency is difficult, favor silhouettes, back-of-head views, or obscuring face with deep shadows.
+
+ANTI-HALLUCINATION RULES:
+- ONLY draw the Boy, the Cellar, and the Transceiver.
+- NO speech bubbles, NO text, NO user interface elements.
+- NO modern smartphones or computers. 1970s industrial tech only.
+- NO other characters unless explicitly mentioned in the event.
 
 Output ONLY raw JSON:
 {
@@ -67,7 +77,7 @@ Output ONLY raw JSON:
   "response_desc": "(少年臉色蒼白，緊盯著門口)",
   "new_inventory": [],
   "new_flags": {"turn_count": 1, "digging_progress": 0, "decision_history": []},
-  "image_prompt": "charcoal sketch of a boy in a dark cellar"
+  "image_prompt": "Extreme Close-up of boy's trembling hands touching the wall"
 }"""
 
 @app.post("/api/game/suggest")
@@ -89,7 +99,8 @@ async def game_suggest(req: SuggestionRequest):
                 "new_fear": req.current_fear,
                 "new_trust": req.current_trust,
                 "response_text": "......",
-                "image_url": "assets/intro_unconscious.png",
+                "response_username": "少年",
+                "image_url": "assets/intro_boy_v8.png",
                 "response_desc": "(他蜷縮在冰冷的水泥地上昏迷不醒。脈搏微弱，似乎對外界的聲音毫無感應。)",
                 "new_inventory": req.inventory,
                 "new_flags": req.flags
@@ -107,7 +118,7 @@ async def game_suggest(req: SuggestionRequest):
                     "status": "accepted",
                     "new_fear": 100, "new_trust": req.current_trust,
                     "response_text": "「給我安靜點！」外頭傳來重踢門板的沉重聲響... 他被驚動了。",
-                    "image_url": "assets/kidnapper_rage.png",
+                    "image_url": "assets/error_system_indoor_v1.png",
                     "response_desc": "(少年嚇得縮在牆角，瞳孔劇烈收縮)",
                     "new_inventory": req.inventory, "new_flags": req.flags
                 }
@@ -116,7 +127,7 @@ async def game_suggest(req: SuggestionRequest):
                     "status": "accepted",
                     "new_fear": 0, "new_trust": 100,
                     "response_text": "「嘿！那邊有人！」通風口照進來一道微弱的光... 是制服人員！",
-                    "image_url": "assets/rescue_light.png",
+                    "image_url": "assets/intro_tv_v8.png",
                     "response_desc": "(他淚流滿面地看著那道光，意識終於清晰)",
                     "new_inventory": req.inventory, "new_flags": req.flags
                 }
@@ -155,12 +166,17 @@ async def game_suggest(req: SuggestionRequest):
         new_fear = max(0, min(100, req.current_fear + fear_delta))
         new_trust = max(0, min(100, req.current_trust + trust_delta))
 
-        # 圖片生成
+        # 圖片生成 - 視覺聖經 (Visual Bible) 注入強製執行
         image_b64 = None
+        CHARACTER_BIBLE = "An 18-year-old boy with messy short dark hair, slim build, pale weary face, wearing a dark hoodie."
+        STYLE_BIBLE = "detailed charcoal sketch on textured grey paper, hand-drawn cross-hatching, monochrome, high contrast noir, cinematic lighting, full bleed, edge-to-edge drawing, no margins, no white borders, no text, no speech bubbles, no modern electronics"
+        
+        final_img_prompt = f"{img_prompt}, {CHARACTER_BIBLE}, {STYLE_BIBLE}"
+        
         try:
             img_res = client.models.generate_images(
                 model='models/imagen-4.0-generate-001',
-                prompt=img_prompt + ", detailed charcoal sketch, hand-drawn cross-hatching, monochrome, high contrast noir, full bleed, edge-to-edge drawing, no margins, no white borders, no text",
+                prompt=final_img_prompt,
                 config=types.GenerateImagesConfig(number_of_images=1, output_mime_type="image/jpeg")
             )
             if img_res.generated_images:

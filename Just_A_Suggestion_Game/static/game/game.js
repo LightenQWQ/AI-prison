@@ -57,37 +57,27 @@ function advanceIntro() {
     }
 
     if (introStep === 1) {
-        // 第一幕：物件發現 (手特寫)
+        // 第一幕：訊號建立 (顯示器視角)
         sceneImage.style.opacity = '0.2';
         setTimeout(() => {
-            sceneImage.src = 'assets/intro_transceiver.png?v=no_border_v1';
-            sceneImage.style.opacity = '1';
-            usernameDisplay.textContent = "SIGNAL FOUND";
-            typeWriterEffect("[ 雜音 ] 在這片廢棄園區的寂靜中，這台機器在跳動。它像是一顆外來的、不在此時空的心臟。", "");
-        }, 500);
-    } 
-    else if (introStep === 2) {
-        // 第二幕：訊號建立 (顯示器視角)
-        sceneImage.style.opacity = '0.2';
-        setTimeout(() => {
-            sceneImage.src = 'assets/intro_monitor.png?v=no_border_v1';
+            sceneImage.src = 'assets/intro_tv_v8.png';
             sceneImage.style.opacity = '1';
             usernameDisplay.textContent = "OBSERVATION LOG";
             typeWriterEffect("[ 嗡鳴聲 ] 螢幕點亮的瞬間，我看見了地底下的噩夢。光影在地窖牆面上扭曲，我看見了他。", "");
         }, 500);
-    }
-    else if (introStep === 3) {
-        // 第三幕：連結 (少年特寫)
+    } 
+    else if (introStep === 2) {
+        // 第二幕：連結 (少年特寫)
         sceneImage.style.opacity = '0.2';
         setTimeout(() => {
-            sceneImage.src = 'assets/intro_unconscious.png?v=no_border_v1';
+            sceneImage.src = 'assets/intro_boy_v8.png';
             sceneImage.style.opacity = '1';
             usernameDisplay.textContent = "SYNC ESTABLISHED";
             typeWriterEffect("他還活著，但靈魂被困在深淵。這台機器是我唯一的介入點... 我該如何喚醒這個靈魂？", "");
             submitBtn.textContent = "啟動核心";
         }, 500);
     }
-    else if (introStep === 4) {
+    else if (introStep === 3) {
         triggerSignalSync();
     }
 }
@@ -225,6 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 初始化 Act 0：發現老舊對白
     submitBtn.textContent = "NEXT";
-    sceneImage.src = 'assets/intro_monitor.png'; // 預設雪花
+    sceneImage.src = 'assets/intro_radio_v8.png';
     typeWriterEffect("我在廢墟的桌底下發現了它。它還在跳動，帶著某種不屬於這時代的訊號。", "");
 });

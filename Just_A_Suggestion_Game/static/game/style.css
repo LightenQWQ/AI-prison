@@ -196,6 +196,20 @@ body {
     line-height: 1.8;
     color: var(--text-primary);
     font-weight: 300;
+    font-family: 'Courier New', Courier, monospace; /* 改為等寬碼字體 */
+    transform: skewX(-3deg); /* 微微傾斜營造類比感 */
+    text-shadow: 1px 0 1px rgba(255,255,255,0.1), -1px 0 1px rgba(255,255,255,0.05); /* 淡淡的殘影 */
+    animation: signal-flicker 8s infinite; /* 引入信號閃爍動畫 */
+    display: block;
+}
+
+@keyframes signal-flicker {
+    0% { opacity: 1; filter: blur(0px); text-shadow: 1px 0 1px rgba(255,255,255,0.1); }
+    94% { opacity: 1; filter: blur(0px); }
+    95% { opacity: 0.8; filter: blur(1px); text-shadow: 3px 0 2px rgba(255,255,255,0.3); }
+    96% { opacity: 1; filter: blur(0px); }
+    97% { opacity: 0.9; filter: blur(0.5px); }
+    98% { opacity: 1; filter: blur(0px); }
 }
 
 .desc {
