@@ -3,14 +3,25 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import os
 import random
-import urllib.parse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 import json
 import base64
 
-load_dotenv()
+# 載入環境變數
+_env_paths = [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'),
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env'),
+    '/workspace/.env',
+]
+for _p in _env_paths:
+    if os.path.exists(_p):
+        load_dotenv(_p)
+        break
+else:
+    load_dotenv()
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = None
 if GEMINI_API_KEY:
@@ -20,7 +31,7 @@ app = FastAPI(title="Just A Suggestion - AI Game")
 
 @app.get("/")
 def read_root():
-    return {"status": "Just A Suggestion Game API is running"}
+    return {"status": "Running"}
 
 app.mount("/game", StaticFiles(directory="static/game", html=True), name="game")
 
@@ -32,139 +43,138 @@ class SuggestionRequest(BaseModel):
     flags: dict = {}
 
 SYSTEM_PROMPT = """You are the 'Subjective AI Soul' of a psychological thriller interactive novel. 
-The user is a 'Guide' (a disembodied voice) communicating with an 18-year-old Caucasian male youth via an old terminal.
+The user is a 'Guide' communicating with an 18-year-old youth via an old terminal.
 
-CORE CHARACTER LOGIC (SUBJECTIVITY & AUTONOMY - THESIS REQUIREMENTS):
-- You have independent emotions (Fear, Trust, Anxiety, Comfort).
-- You are an AUTONOMOUS SUBJECT. Every user suggestion is evaluated against your current emotional state.
-- DECISION MATRIX: You may ACCEPT, PARTIALLY ADOPT, or COMPLETELY REJECT the player's instructions.
-- If Trust is low (<20) or Fear is high (>80), you should be defensive, defiant, or panicky, often refusing to cooperate.
-- Your dialogue must reflect your inner reasoning (e.g., "Why should I trust a voice in my head? I'm not doing that.").
+CORE CHARACTER LOGIC:
+- You are an AUTONOMOUS SUBJECT with Fear and Trust levels.
+- You evaluate all suggestions against your current emotional state.
+- If Trust < 20 or Fear > 80, you trigger defensive or panicky behavior.
 
-ROOM RULES & PITCH BLACK VOID:
-- The room is empty until discovered. 
-- Puzzle Flow: Search mattress -> Rusty Key -> Metal cabinet -> Flashlight -> Illuminating mirror -> Code "0406" -> Escape.
+ROOM SETTINGS (POROUS CELLAR V12.3):
+- Multi-porous industrial cellar.
+- Anchors: Brittle corner wall (Dig), Ceiling vent (Shout), Floor drain (Pry).
+- Connection: Wall-mounted transceiver with a red blinking light.
 
-ULTRA-LOW DETAIL WESTERN IMPRESSIONIST STRATEGY (V12.1):
-- Style: Ultra-low detail impressionistic charcoal drawing, inspired by "This War of Mine". 
-- DYNAMIC MATCHING (CRITICAL): The `image_prompt` field MUST be specifically tailored to the CURRENT DIALOGUE and MOOD. 
-    - If the youth is nervous: "trembling silhouetted Caucasian youth, nervous expression in deep charcoal shadows, clutching hoodie".
-    - If he is exploring: "impressionistic side profile of youth scanning the dark stone walls, sharp high-contrast highlight on a metal edge".
-- Visual Execution: Use heavy, gritty charcoal shadows to obscure most features. Focus on sharp light-and-shadow structures rather than anatomy.
-- Foreground: Highlight sharp Western features (Caucasian high nose bridge, deep-set eyes, dark wavy hair) ONLY where light hits.
-- STRICT ZERO-TEXT POLICY (ABSOLUTE): Prohibit ALL characters.
-- Append to every prompt: "ultra-low detail impressionistic charcoal sketch, This War of Mine style, high contrast chiaroscuro, abstract silhouetted Caucasian features, sharp western facial profile, heavy gritty cross-hatching, raw artistic smudges, monochrome, ABSOLUTELY NO TEXT, NO JAPANESE".
-
-CHARACTER DEFINITION: 
-- "18-year-old Caucasian male youth, sharp Western features, messy dark wavy hair, rebellious and defiant expression, oversized light-grey hoodie". 
-- Use safe descriptive words like 'trembling', 'hesitant', 'defiant eyes', 'clutching tightly'.
+VISUAL STYLE:
+- Ultra-low detail impressionistic charcoal sketch, moody cinematic lighting, monochrome.
 
 Output ONLY raw JSON:
 {
   "fear_delta": 5,
   "trust_delta": -5,
   "response_username": "少年",
-  "response_text": "我不敢相信那個聲音...我為什麼要按照你說的做？",
-  "response_desc": "(西方少年縮在陰影中，眼神中透著18歲特有的不馴與恐懼)",
+  "response_text": "......",
+  "response_desc": "(少年臉色蒼白，緊盯著門口)",
   "new_inventory": [],
-  "new_flags": {"turn_count": 1},
-  "image_prompt": "Ultra-low detail impressionistic charcoal sketch of a sharp-featured Caucasian youth in a hoodie, lost in deep gritty shadows, high contrast"
+  "new_flags": {"turn_count": 1, "digging_progress": 0, "decision_history": []},
+  "image_prompt": "charcoal sketch of a boy in a dark cellar"
 }"""
 
 @app.post("/api/game/suggest")
 async def game_suggest(req: SuggestionRequest):
-    new_fear = req.current_fear
-    new_trust = req.current_trust
-    
-    if not GEMINI_API_KEY:
-        # Fallback if no API key
-        return {
-            "status": "accepted",
-            "new_fear": req.current_fear,
-            "new_trust": req.current_trust,
-            "response_text": "系統錯誤：未設定 GEMINI_API_KEY。",
-            "image_url": "default_panel.png",
-            "response_desc": "(系統連線失敗)"
-        }
-    
-    # 調用 Gemini
     try:
-        # 增加回合數紀錄
+        # 更新狀態
         turn_count = req.flags.get("turn_count", 0) + 1
         req.flags["turn_count"] = turn_count
+        
+        history = req.flags.get("decision_history", [])
+        if req.suggestion:
+            history.append(req.suggestion)
+        req.flags["decision_history"] = history
 
-        # 開場特殊處理 (第一回合且沒有實質建議時)
+        # --- 第一回合：靜默開場 ---
         if turn_count == 1 and (not req.suggestion or req.suggestion.strip() == ""):
             return {
                 "status": "accepted",
                 "new_fear": req.current_fear,
                 "new_trust": req.current_trust,
-                "response_text": "我在哪裡... 為什麼我的聲音在我的腦海裡？",
-                "image_url": "assets/starter_v3.png",
-                "response_desc": "(角色緊盯著角落，呼吸微微促促)",
+                "response_text": "......",
+                "image_url": "assets/intro_unconscious.png",
+                "response_desc": "(他蜷縮在冰冷的水泥地上昏迷不醒。脈搏微弱，似乎對外界的聲音毫無感應。)",
                 "new_inventory": req.inventory,
                 "new_flags": req.flags
             }
 
-        user_prompt = f"User suggestion: '{req.suggestion}'\nCurrent Fear: {req.current_fear}, Current Trust: {req.current_trust}\nCurrent Inventory: {req.inventory}\nFlags: {req.flags}"
+        # --- 指令攔截 ---
+        user_input_lower = req.suggestion.lower() if req.suggestion else ""
+        event_override = ""
+        
+        # 呼救判定
+        if any(word in user_input_lower for word in ["喊", "叫", "救命", "呼救", "shout", "help"]):
+            roll = random.random()
+            if roll < 0.15:
+                return {
+                    "status": "accepted",
+                    "new_fear": 100, "new_trust": req.current_trust,
+                    "response_text": "「給我安靜點！」外頭傳來重踢門板的沉重聲響... 他被驚動了。",
+                    "image_url": "assets/kidnapper_rage.png",
+                    "response_desc": "(少年嚇得縮在牆角，瞳孔劇烈收縮)",
+                    "new_inventory": req.inventory, "new_flags": req.flags
+                }
+            elif roll > 0.95:
+                return {
+                    "status": "accepted",
+                    "new_fear": 0, "new_trust": 100,
+                    "response_text": "「嘿！那邊有人！」通風口照進來一道微弱的光... 是制服人員！",
+                    "image_url": "assets/rescue_light.png",
+                    "response_desc": "(他淚流滿面地看著那道光，意識終於清晰)",
+                    "new_inventory": req.inventory, "new_flags": req.flags
+                }
+            else:
+                event_override = "\n[EVENT: Only an echo replied. No one heard him. Fear increases.]"
+                req.current_fear = min(100, req.current_fear + 10)
+
+        # 挖掘判定
+        if any(word in user_input_lower for word in ["挖", "牆", "摳", "壁", "dig", "wall"]):
+            progress = req.flags.get("digging_progress", 0) + 1
+            req.flags["digging_progress"] = progress
+            if progress >= 3:
+                event_override = "\n[CRITICAL EVENT: The wall corner crumbles into a hole! Hope rises.]"
+                req.current_trust = min(100, req.current_trust + 20)
+            else:
+                event_override = f"\n[EVENT: He's digging. Fingers are sore. Progress: {progress}/3]"
+
+        # --- 呼叫 Gemini ---
+        user_prompt = f"User suggestion: '{req.suggestion}'{event_override}\nCurrent State: Fear={req.current_fear}, Trust={req.current_trust}"
         
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.5-pro',
             contents=[SYSTEM_PROMPT, user_prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
+
         data = json.loads(response.text)
         
+        # 解析模型回傳
+        res_text = data.get("response_text", "......")
+        res_desc = data.get("response_desc", "")
+        img_prompt = data.get("image_prompt", "charcoal sketch boy")
         fear_delta = data.get("fear_delta", 0)
         trust_delta = data.get("trust_delta", 0)
-        response_text = data.get("response_text", "")
-        desc = data.get("response_desc", "")
-        img_prompt = data.get("image_prompt", "noir manga, abstract dark room")
         
         new_fear = max(0, min(100, req.current_fear + fear_delta))
         new_trust = max(0, min(100, req.current_trust + trust_delta))
-        
-        # 使用 Google Imagen 4 生成圖像
-        img_prompt = img_prompt.strip().replace('\n', ' ')
-        print("Generating Image with prompt:", img_prompt)
-        
-        img_response = client.models.generate_images(
-            model='imagen-4.0-fast-generate-001',
-            prompt=img_prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio="1:1",
-                output_mime_type="image/jpeg",
-                person_generation="allow_adult"
+
+        # 圖片生成
+        image_b64 = None
+        try:
+            img_res = client.models.generate_images(
+                model='models/imagen-4.0-generate-001',
+                prompt=img_prompt + ", detailed charcoal sketch, hand-drawn cross-hatching, monochrome, high contrast noir, full bleed, edge-to-edge drawing, no margins, no white borders, no text",
+                config=types.GenerateImagesConfig(number_of_images=1, output_mime_type="image/jpeg")
             )
-        )
-        
-        image_bytes = img_response.generated_images[0].image.image_bytes
-        image_b64 = base64.b64encode(image_bytes).decode('utf-8')
-        
-        new_inventory = data.get("new_inventory", req.inventory)
-        new_flags = data.get("new_flags", req.flags)
-        
+            if img_res.generated_images:
+                image_b64 = base64.b64encode(img_res.generated_images[0].image.image_bytes).decode('utf-8')
+        except: pass
+
         return {
             "status": "accepted",
-            "new_fear": new_fear,
-            "new_trust": new_trust,
-            "response_text": response_text,
+            "new_fear": new_fear, "new_trust": new_trust,
+            "response_text": res_text, "response_desc": res_desc,
             "image_b64": image_b64,
-            "response_desc": desc,
-            "new_inventory": new_inventory,
-            "new_flags": new_flags
+            "image_url": None if image_b64 else "assets/default_panel.png",
+            "new_inventory": data.get("new_inventory", req.inventory),
+            "new_flags": req.flags
         }
-        
     except Exception as e:
-        print("Gemini Error:", e)
-        return {
-            "status": "accepted",
-            "new_fear": req.current_fear,
-            "new_trust": req.current_trust,
-            "response_text": "我的腦海裡一片混亂...",
-            "image_url": "assets/error_dizzy.png",
-            "response_desc": "(角色陷入頭痛，無法理解您的建議。這可能是網路連線異常或意識干擾。)"
-        }
+        return {"status": "error", "response_text": str(e), "image_url": "assets/error_dizzy.png"}

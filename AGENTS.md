@@ -27,6 +27,7 @@
 - 2026-04-10 : 完成「全端/Git 同步」環境配置，整合動態 API 與資料庫 Git 追蹤。
 - 2026-04-16 : 完成「AI Prison」架構遷移，整合 A2A 生態系統與繁體中文語系。
 - 2026-04-16 : 完成「只是一個建議」遊戲雲端部署，解決 Docker 依賴與防火牆衝突，伺服器 IP 核定為 `35.236.173.176`。
+- 2026-04-18 : 升級「只是一個建議」至 Gemini 2.5 Pro 與 Imagen 4.0，解決 API 模型版本衝突，並全面統一序章與遊戲畫風為炭筆素描風格。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
