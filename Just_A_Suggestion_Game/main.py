@@ -52,21 +52,17 @@ CORE CHARACTER LOGIC:
 
 ROOM SETTINGS (POROUS CELLAR V12.5):
 - Multi-porous industrial cellar: damp bricks, rusted pipes, cold concrete.
-- Connection: Wall-mounted radio transceiver with a red blinking light.
+- Connection: Terminal-based communication only.
 
-DIRECTOR'S CINEMATOGRAPHY (MANGA STYLE):
-- Choose your 'image_prompt' composition based on emotional weight:
-    - HIGH FEAR: Use 'Extreme Close-up' on eyes or trembling hands. High angle shots from corners.
-    - HIGH TRUST: Use 'Medium Shot' showing the boy sitting or leaning against the wall.
-    - SYNC MOMENTS: Use 'Over-the-shoulder shot' looking at the transceiver to ensure character consistency.
-    - EXPLORATION: Use 'Low angle view' or 'Wide shot' showing the boy's silhouette against the heavy cellar walls.
-- VISUAL CONSISTENCY STRATEGY: If full-face consistency is difficult, favor silhouettes, back-of-head views, or obscuring face with deep shadows.
+DIRECTOR'S CINEMATOGRAPHY (NOIR COMIC STRATEGY):
+- VISUAL BIBLE: American Noir Comic, heavy ink rendering, stark monochrome.
+- COMPOSITION POLICY: The focus is the ENVIRONMENT, not the face. The character is integrated into the background.
+- IMAGE STYLE: High contrast, dramatic lighting, detailed background (cellar pipes, textures, debris).
+- SHOT CHOICE: Prefer Wide Shots or Medium Shots to show the scene. Avoid face-only close-ups.
+- FACIAL TREATMENT: Faces are allowed, but should be secondary or partially obscured by shadows.
 
 ANTI-HALLUCINATION RULES:
-- ONLY draw the Boy, the Cellar, and the Transceiver.
-- NO speech bubbles, NO text, NO user interface elements.
-- NO modern smartphones or computers. 1970s industrial tech only.
-- NO other characters unless explicitly mentioned in the event.
+- NO walkie-talkies/radios, NO halftone dots, NO text/speech bubbles.
 
 Output ONLY raw JSON:
 {
@@ -166,10 +162,11 @@ async def game_suggest(req: SuggestionRequest):
         new_fear = max(0, min(100, req.current_fear + fear_delta))
         new_trust = max(0, min(100, req.current_trust + trust_delta))
 
-        # 圖片生成 - 視覺聖經 (Visual Bible) 注入強製執行
+        # 圖片生成 - 視覺聖經 (Visual Bible) 注入強制執行
         image_b64 = None
-        CHARACTER_BIBLE = "An 18-year-old boy with messy short dark hair, slim build, pale weary face, wearing a dark hoodie."
-        STYLE_BIBLE = "detailed charcoal sketch on textured grey paper, hand-drawn cross-hatching, monochrome, high contrast noir, cinematic lighting, full bleed, edge-to-edge drawing, no margins, no white borders, no text, no speech bubbles, no modern electronics"
+        CHARACTER_BIBLE = "An 18-year-old youth with messy dark hair, wearing a dark hoodie. He is part of the environment, not the sole focus."
+        STYLE_BIBLE = "American Noir Comic, focus on detailed environment (pipes, damp walls, rusted metal), heavy ink rendering, high contrast, cinematic lighting, pitch black shadows (Chiaroscuro), grimy texture."
+        NEGATIVE_PROMPT = "halftone dots, dots, screentone, text, speech bubbles, modern electronics, user interface, clean environments"
         
         final_img_prompt = f"{img_prompt}, {CHARACTER_BIBLE}, {STYLE_BIBLE}"
         
@@ -177,7 +174,11 @@ async def game_suggest(req: SuggestionRequest):
             img_res = client.models.generate_images(
                 model='models/imagen-4.0-generate-001',
                 prompt=final_img_prompt,
-                config=types.GenerateImagesConfig(number_of_images=1, output_mime_type="image/jpeg")
+                config=types.GenerateImagesConfig(
+                    number_of_images=1, 
+                    output_mime_type="image/jpeg",
+                    negative_prompt=NEGATIVE_PROMPT
+                )
             )
             if img_res.generated_images:
                 image_b64 = base64.b64encode(img_res.generated_images[0].image.image_bytes).decode('utf-8')

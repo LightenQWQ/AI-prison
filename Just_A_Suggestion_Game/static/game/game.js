@@ -63,7 +63,7 @@ function advanceIntro() {
             sceneImage.src = 'assets/intro_tv_v8.png';
             sceneImage.style.opacity = '1';
             usernameDisplay.textContent = "OBSERVATION LOG";
-            typeWriterEffect("[ 嗡鳴聲 ] 螢幕點亮的瞬間，我看見了地底下的噩夢。光影在地窖牆面上扭曲，我看見了他。", "");
+            typeWriterEffect("", "[ 嗡鳴聲 ] 螢幕點亮的瞬間，我看見了地底下的噩夢。光影在地窖牆面上扭曲，我看見了他。");
         }, 500);
     } 
     else if (introStep === 2) {
@@ -73,7 +73,7 @@ function advanceIntro() {
             sceneImage.src = 'assets/intro_boy_v8.png';
             sceneImage.style.opacity = '1';
             usernameDisplay.textContent = "SYNC ESTABLISHED";
-            typeWriterEffect("他還活著，但靈魂被困在深淵。這台機器是我唯一的介入點... 我該如何喚醒這個靈魂？", "");
+            typeWriterEffect("", "他還活著，但靈魂被困在深淵。這台機器是我唯一的介入點... 我該如何喚醒這個靈魂？");
             submitBtn.textContent = "啟動核心";
         }, 500);
     }
@@ -123,13 +123,49 @@ async function sendSuggestion(forcedSuggestion = null) {
     isWaiting = true;
     submitBtn.disabled = true;
     
-    let waitSeconds = 0;
-    const waitingInterval = setInterval(() => {
-        waitSeconds++;
-        let dots = ".".repeat(waitSeconds % 4);
-        npcText.innerHTML = `<span class="desc" style="color: #666; font-family: monospace;">> DECODING SIGNAL${dots}<br>(量子意識網格同步中...)</span>`;
-    }, 800);
+    // --- 動態等待訊息邏輯 ---
+    const loadingMessagePool = {
+        search: [
+            "[ 正在對環境進行掃描... ]",
+            "[ 少年走向房間陰暗角落... ]",
+            "[ 這邊找不到，換另一邊看看... ]",
+            "[ 撥開廢墟，揚起一堆灰塵... ]",
+            "[ 似乎在霉味中聞到了什麼... ]"
+        ],
+        dig: [
+            "[ 正在持續施加壓力... ]",
+            "[ 指尖嵌入牆縫，碎石掉落... ]",
+            "[ 指甲有些斷裂，但他沒有停下... ]",
+            "[ 牆壁底座傳來空心的回音... ]",
+            "[ 汗水滴落在冰冷的水泥地上... ]"
+        ],
+        general: [
+            "[ 正在解碼量子意識訊號... ]",
+            "[ 少年正在過濾指令... ]",
+            "[ 神經元路徑同步中... ]",
+            "[ 影像引擎正在構建深淵圖景... ]",
+            "[ 終端機負載過高，螢幕閃爍中... ]"
+        ]
+    };
+
+    // 根據指令選擇分類
+    let category = "general";
+    const lowerSuggestion = suggestion.toLowerCase();
+    if (["找", "看", "查", "find", "look", "search", "探索"].some(k => lowerSuggestion.includes(k))) category = "search";
+    if (["挖", "摳", "壁", "牆", "dig", "wall"].some(k => lowerSuggestion.includes(k))) category = "dig";
+
+    let messageIndex = 0;
+    const currentMessages = loadingMessagePool[category];
     
+    // 立即顯示第一條
+    npcText.innerHTML = `<span class="desc" style="color: #666; font-family: monospace;">> DECODING SIGNAL...<br>${currentMessages[0]}</span>`;
+
+    const waitingInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % currentMessages.length;
+        npcText.innerHTML = `<span class="desc" style="color: #666; font-family: monospace;">> DECODING SIGNAL...<br>${currentMessages[messageIndex]}</span>`;
+    }, 3000);
+    // -----------------------
+
     sceneImage.style.opacity = '0.4';
     
     try {
@@ -183,16 +219,38 @@ async function sendSuggestion(forcedSuggestion = null) {
 function typeWriterEffect(text, desc) {
     npcText.innerHTML = '';
     let i = 0;
-    function type() {
+    
+    // 如果沒有主標題文字，隱藏使用者標籤以創造純描述感
+    if (text === "") {
+        usernameDisplay.style.display = 'none';
+    } else {
+        usernameDisplay.style.display = 'block';
+    }
+    
+    function typeMain() {
         if (i < text.length) {
             npcText.innerHTML += text.charAt(i);
             i++;
-            setTimeout(type, 25);
+            setTimeout(typeMain, 25);
         } else if (desc) {
-            npcText.innerHTML += `<br><span class="desc">${desc}</span>`;
+            // 主要文字打完後，開始打描述文字
+            const descSpan = document.createElement('span');
+            descSpan.className = 'desc';
+            if (text !== "") npcText.appendChild(document.createElement('br')); // 如果有主文字才換行
+            npcText.appendChild(descSpan);
+            
+            let j = 0;
+            function typeDesc() {
+                if (j < desc.length) {
+                    descSpan.innerHTML += desc.charAt(j);
+                    j++;
+                    setTimeout(typeDesc, 18); // 描述文字打快一點
+                }
+            }
+            typeDesc();
         }
     }
-    type();
+    typeMain();
 }
 
 submitBtn.addEventListener('click', () => {
@@ -216,5 +274,5 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化 Act 0：發現老舊對白
     submitBtn.textContent = "NEXT";
     sceneImage.src = 'assets/intro_radio_v8.png';
-    typeWriterEffect("我在廢墟的桌底下發現了它。它還在跳動，帶著某種不屬於這時代的訊號。", "");
+    typeWriterEffect("", "我在廢墟的桌底下發現了它。它還在跳動，帶著某種不屬於這時代的訊號。");
 });

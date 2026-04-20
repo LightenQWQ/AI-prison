@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just a Suggestion | 只是一個建議</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="overlay">
+        <img src="assets/cover.png" style="width: 400px; height: auto; margin-bottom: 20px; border: 1px solid #333; filter: grayscale(1);">
+        <h1>JUST A SUGGESTION</h1>
+        <p style="color: #666; margin-bottom: 30px; letter-spacing: 2px;">他可能不會聽你的。</p>
+        <button class="btn-start" onclick="startGame()">進入地下室</button>
+    </div>
+
+    <div id="game-container">
+        <header id="status-bar">
+            <div class="stat-item">
+                <label>信任度 (TRUST)</label>
+                <div class="bar-outer"><div id="trust-bar" class="bar-inner"></div></div>
+            </div>
+            <div class="stat-item">
+                <label>恐慌度 (PANIC)</label>
+                <div class="bar-outer"><div id="fear-bar" class="bar-inner"></div></div>
+            </div>
+        </header>
+
+        <div id="scene-container">
+            <img id="scene-image" src="" alt="Game Scene">
+            <div class="vignette"></div>
+            <div id="noise-layer"></div>
+            <div class="panel-border"></div>
+        </div>
+
+        <div id="dialogue-box">
+            <div id="status-indicator" style="float: right; font-family: monospace; font-size: 0.7rem; color: #444;">[SYSTEM READY]</div>
+            <div id="speaker">青年</div>
+            <p id="text-content">......</p>
+            <p id="desc-content"></p>
+        </div>
+
+        <div id="input-area">
+            <input type="text" id="suggestion-input" placeholder="輸入你的建議..." autocomplete="off">
+            <button id="submit-btn" onclick="sendSuggestion()">傳達</button>
+        </div>
+        
+        <div id="inventory-display" style="margin-top: 10px; font-size: 0.8rem; color: #555;">
+            物品: <span id="inventory-list">無</span>
+        </div>
+    </div>
+
+    <!-- 音效與 BGM (可替換) -->
+    <audio id="bgm" loop>
+        <source src="https://ia800109.us.archive.org/30/items/DarkAmbient_728/DarkAmbient.mp3" type="audio/mpeg">
+    </audio>
+
+    <script src="game.js"></script>
+</body>
+</html>
