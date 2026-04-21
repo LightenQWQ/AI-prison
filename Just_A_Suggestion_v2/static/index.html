@@ -9,41 +9,65 @@
 </head>
 <body>
     <div id="overlay">
-        <img src="assets/cover.png" style="width: 400px; height: auto; margin-bottom: 20px; border: 1px solid #333; filter: grayscale(1);">
-        <h1>JUST A SUGGESTION</h1>
-        <p style="color: #666; margin-bottom: 30px; letter-spacing: 2px;">他可能不會聽你的。</p>
-        <button class="btn-start" onclick="startGame()">進入地下室</button>
+        <img src="assets/cover_v3.png" style="width: 400px; height: auto; margin-bottom: 20px; border: 1px solid #333;">
+        <div class="glitch-wrapper">
+            <h1 class="glitch" data-text="JUST A SUGGESTION">JUST A SUGGESTION</h1>
+        </div>
+        <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 4px; font-weight: 300; text-shadow: 0 0 10px rgba(255,255,255,0.3);">你還記得，你為什麼在這裡嗎？</p>
+        <button class="btn-start" onclick="startGame()">建立連線</button>
     </div>
 
     <div id="game-container">
-        <header id="status-bar">
-            <div class="stat-item">
-                <label>信任度 (TRUST)</label>
-                <div class="bar-outer"><div id="trust-bar" class="bar-inner"></div></div>
+        <header id="monitor-dashboard">
+            <div class="monitor-item">
+                <div class="wave-label-container">
+                    <svg class="anatomical-brain" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M100 180c-40 0-70-30-70-70 0-25 15-45 35-55-5-15 0-35 15-45 20-15 45-10 55 5 10-15 35-20 55-5 15 10 20 30 15 45 20 10 35 30 35 55 0 40-30 70-70 70z"></path>
+                        <path d="M100 30v150M70 50c10-5 20-5 30 0M130 50c-10-5-20-5-30 0M60 110c15-10 30-10 45 0M140 110c-15-10-30-10-45 0"></path>
+                        <circle cx="100" cy="110" r="2" fill="currentColor"></circle>
+                    </svg>
+                    <span class="vitals-label">SYNC / EEG</span>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="eeg-canvas"></canvas>
+                    <div class="monitor-text"><span id="sync-value">30</span>%</div>
+                </div>
             </div>
-            <div class="stat-item">
-                <label>恐慌度 (PANIC)</label>
-                <div class="bar-outer"><div id="fear-bar" class="bar-inner"></div></div>
+            
+            <div class="monitor-item">
+                <div class="wave-label-container">
+                    <svg class="anatomical-heart" viewBox="0 0 200 200" fill="currentColor">
+                        <path d="M145 55c-5-15-20-30-40-20-5-10-20-15-30-10-15-10-35 0-35 25 0 20 15 35 35 55 10 10 20 20 30 35 10-15 20-25 30-35 15-15 25-30 25-50zM100 170c-30-40-60-70-60-110 0-30 25-55 55-45 5-5 15-10 25-5 15-10 40 5 40 35 0 35-25 70-60 125z"></path>
+                        <path d="M85 30l-5 15M115 30l5 15M135 65l15 5" stroke="currentColor" stroke-width="2"></path>
+                    </svg>
+                    <span class="vitals-label">HR / ECG</span>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="ecg-canvas"></canvas>
+                    <div class="monitor-text danger"><span id="hr-value">75</span> BPM</div>
+                </div>
             </div>
         </header>
 
         <div id="scene-container">
+            <div id="location-display">CCTV CH-01 | CELL</div>
             <img id="scene-image" src="" alt="Game Scene">
+            <div id="memory-fragment"></div>
             <div class="vignette"></div>
             <div id="noise-layer"></div>
             <div class="panel-border"></div>
         </div>
 
         <div id="dialogue-box">
-            <div id="status-indicator" style="float: right; font-family: monospace; font-size: 0.7rem; color: #444;">[SYSTEM READY]</div>
+            <div id="status-indicator" style="float: right; font-family: monospace; font-size: 0.7rem; color: #444;">[SYNCED]</div>
             <div id="speaker">青年</div>
             <p id="text-content">......</p>
             <p id="desc-content"></p>
         </div>
 
         <div id="input-area">
-            <input type="text" id="suggestion-input" placeholder="輸入你的建議..." autocomplete="off">
-            <button id="submit-btn" onclick="sendSuggestion()">傳達</button>
+            <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off">
+            <button id="submit-btn" onclick="sendSuggestion()">低語</button>
         </div>
         
         <div id="inventory-display" style="margin-top: 10px; font-size: 0.8rem; color: #555;">
@@ -55,6 +79,8 @@
     <audio id="bgm" loop>
         <source src="https://ia800109.us.archive.org/30/items/DarkAmbient_728/DarkAmbient.mp3" type="audio/mpeg">
     </audio>
+
+    <div id="prologue-overlay" style="display: none;"></div>
 
     <script src="game.js"></script>
 </body>

@@ -162,11 +162,10 @@ async def game_suggest(req: SuggestionRequest):
         new_fear = max(0, min(100, req.current_fear + fear_delta))
         new_trust = max(0, min(100, req.current_trust + trust_delta))
 
-        # 圖片生成 - 視覺聖經 (Visual Bible) 注入強制執行
+        # 圖片生成 - 視覺聖經 (Visual Bible) 注入強制執行 (Consistency Lock)
         image_b64 = None
         CHARACTER_BIBLE = "An 18-year-old youth with messy dark hair, wearing a dark hoodie. He is part of the environment, not the sole focus."
-        STYLE_BIBLE = "American Noir Comic, focus on detailed environment (pipes, damp walls, rusted metal), heavy ink rendering, high contrast, cinematic lighting, pitch black shadows (Chiaroscuro), grimy texture."
-        NEGATIVE_PROMPT = "halftone dots, dots, screentone, text, speech bubbles, modern electronics, user interface, clean environments"
+        STYLE_BIBLE = "American Noir Comic, hand-drawn ink illustration, focus on detailed environment (pipes, damp walls, rusted metal), heavy ink rendering, high contrast, cinematic lighting, pitch black shadows (Chiaroscuro), grimy texture, non-photographic, no photography, line art aesthetic."
         
         final_img_prompt = f"{img_prompt}, {CHARACTER_BIBLE}, {STYLE_BIBLE}"
         
@@ -176,13 +175,15 @@ async def game_suggest(req: SuggestionRequest):
                 prompt=final_img_prompt,
                 config=types.GenerateImagesConfig(
                     number_of_images=1, 
-                    output_mime_type="image/jpeg",
-                    negative_prompt=NEGATIVE_PROMPT
+                    output_mime_type="image/jpeg"
                 )
             )
             if img_res.generated_images:
                 image_b64 = base64.b64encode(img_res.generated_images[0].image.image_bytes).decode('utf-8')
-        except: pass
+            else:
+                print("Imagen generated_images was EMPTY")
+        except Exception as img_err:
+            print(f"Imagen generation error: {img_err}")
 
         return {
             "status": "accepted",

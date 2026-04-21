@@ -5,6 +5,7 @@ import os
 import random
 import json
 import base64
+import re
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -27,77 +28,81 @@ client = None
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 
-app = FastAPI(title="Just A Suggestion - Full Version")
+app = FastAPI(title="Just A Suggestion - Hardened Observer Mode")
 
-# 遊戲狀態模型
 class GameState(BaseModel):
     trust: int = 30
     fear: int = 50
+    suspicion: int = 0
+    location: str = "cell"
     inventory: list = []
-    flags: dict = {}
+    unlocked_rooms: list = ["cell"]
+    escape_progress: dict = {"dig": 0, "pick": 0, "talk": 0}
     history: list = []
     turn: int = 0
     is_over: bool = False
     ending: str = ""
+    last_monologues: list = []
 
 class SuggestionRequest(BaseModel):
     suggestion: str
     state: GameState
 
-# 系統指令
-SYSTEM_PROMPT = """你是一場心理驚悚互動小說的「主導 AI」與「電影導演」。
-玩家是一個透過終端機與被關在地下室的 18 歲青年溝通的「引導者」。
-
-青年特徵：
-- 18 歲，叛逆，不輕易相信他人。
-- 被困在潮濕、陰暗的地下室（工業風格，廢棄管道，冷硬水泥）。
-- 擁有恐懼值 (Fear) 與信任值 (Trust)。
-
-視覺風格規約 (Visual Bible)：
-- 風格：炭筆素描 (Charcoal Sketch)，黑白單色 (Monochrome)。
-- 參考《This War of Mine》的沉重感、粗獷線條與強烈明暗對比 (Chiaroscuro)。
-- 重點在於環境氛圍（牆上的水漬、鏽蝕的鐵管、破碎的磚塊），青年融入環境中，通常以側臉、背影或俯視鏡頭呈現。
-- **絕對禁止出現任何文字、對話框或 UI 元素在圖片中。**
-
-輸出格式：
-必須回傳純 JSON 格式：
-{
-  "response_text": "他在終端機上打出的文字",
-  "response_desc": "描述青年的動作或環境變化 (括號內)",
-  "trust_delta": 增加或減少的信任值 (-20 ~ 20),
-  "fear_delta": 增加或減少的恐懼值 (-20 ~ 20),
-  "image_prompt": "給 Imagen 4.0 的英文算圖提示詞 (不包含風格關鍵字)",
-  "event_triggered": "是否有隨機事件發生 (名稱)",
-  "is_escape_successful": false
-}"""
-
-# 逃脫方式與機率
-ESCAPE_METHODS = {
-    "挖牆": {"base_prob": 0.05, "progress_key": "dig_progress", "required_progress": 5, "fear_inc": 10},
-    "呼救": {"base_prob": 0.02, "fail_event": "kidnapper_alert", "fear_inc": 30},
-    "撬鎖": {"base_prob": 0.0, "requires_item": "鐵絲", "item_prob": 0.4, "fear_inc": 15},
-    "躲藏": {"base_prob": 0.0, "requires_event": "kidnapper_enter", "success_prob": 0.6},
-    "縱火": {"base_prob": 0.05, "requires_item": "打火機", "fear_inc": 40},
-    "通風口": {"base_prob": 0.1, "difficulty": 0.8, "fear_inc": 20},
-    "談判": {"base_prob": 0.0, "min_trust": 90, "success_prob": 0.3},
-    "裝死": {"base_prob": 0.15, "fail_event": "kidnapper_punish", "fear_inc": 20},
-    "破壞水管": {"base_prob": 0.08, "progress_key": "flood_progress", "required_progress": 3},
-    "等待救援": {"base_turn": 20, "base_prob": 0.02}
+ROOM_SPECS = {
+    "cell": "A cold, damp industrial cell. Rough grey concrete walls, leaking iron pipes. Surveillance camera POV from ceiling corner.",
+    "hallway": "Long, narrow underground corridor. Industrial lights flickering. Dark water puddles. Branching heavy steel doors with complex piping.",
+    "storage": "Cluttered storage room. High shelves, boxes, rusting tools. Shadows dominate. Smell of old oil.",
+    "locked_room": "Heavy steel vault door. Deep scratches. Red light from floor crevice. Dramatic chiaroscuro. Pulsing mechanical hum.",
+    "final_gateway": "A massive armored gateway at the end of the tunnel. Blinding white light leaks from the edges. The sound of the world outside."
 }
 
-# 隨機事件
-RANDOM_EVENTS = [
-    {"name": "腳步聲", "desc": "門外傳來沉重的腳步聲...", "fear_mod": 20},
-    {"name": "老鼠", "desc": "一隻老鼠從牆角跑過，好像帶了什麼東西。", "item": "鐵絲"},
-    {"name": "漏水", "desc": "天花板開始滴水，水泥牆變得濕軟。", "flag": "wall_soft"},
-    {"name": "舊報紙", "desc": "你在角落發現一張泛黃的報紙，記載著這附近的失蹤案。", "trust_mod": -5},
-    {"name": "收音機雜訊", "desc": "遠處傳來模糊的廣播聲，似乎有人在搜尋。", "trust_mod": 10},
-    {"name": "暴雨", "desc": "外面下起暴雨，雷聲掩蓋了一切聲音。", "flag": "noise_masked"},
-    {"name": "微弱地震", "desc": "地面震動了一下，牆壁出現裂縫。", "flag": "wall_cracked"},
-    {"name": "掉落的手電筒", "desc": "你在通風口下方撿到一支快沒電的手電筒。", "item": "手電筒"},
-    {"name": "爭吵聲", "desc": "外頭傳來綁架者的激烈爭吵聲。", "flag": "distracted"},
-    {"name": "窗邊的鳥", "desc": "一隻小鳥停在氣窗邊，叫了幾聲。", "fear_mod": -15}
+# 空間鄰接圖 (Adjacency Map)
+MAZE_MAP = {
+    "cell": {"exits": ["hallway"], "danger": 0},
+    "hallway": {"exits": ["cell", "storage", "locked_room", "final_gateway"], "danger": 0.1},
+    "storage": {"exits": ["hallway"], "danger": 0.3},
+    "locked_room": {"exits": ["hallway"], "danger": 0.9}, # 高危險區域 (猝死點)
+    "final_gateway": {"exits": [], "danger": 0}
+}
+
+# 視覺關鍵字過濾器
+FORBIDDEN_VISUAL_WORDS = [
+    r"staring at camera", r"eye contact", r"looking at viewer", r"full face",
+    r"瞳孔", r"直視鏡頭", r"正臉"
 ]
+
+def sanitize_visual_keywords(text: str) -> str:
+    """強制抹除所有涉及正臉描述的詞彙"""
+    for pattern in FORBIDDEN_VISUAL_WORDS:
+        text = re.sub(pattern, "shadowy silhouette", text, flags=re.IGNORECASE)
+    return text
+
+SYSTEM_PROMPT = """您是監控系統的「冷酷日誌員」。您不是作者，而是在記錄監視器畫面。
+敘事規則 (HARD MANDATE)：
+1. **旁觀視角 (Objective Event Narrative)**：禁止描述內心感受。使用「第三人稱客觀事件敘述法」。
+2. **視覺限制**：側臉、背影、俯視。禁止正臉與眼神對視。
+3. **角色形象**：少年身穿帽 T、牛仔褲，凌亂捲髮。
+4. **神祕入口發現 (Spatial Discovery)**：當角色在 'hallway' (走廊) 時，你必須在 response_desc 與 image_prompt 中描述至少兩扇門。
+   - **禁止直接命名**：不要說「儲物間的門」。
+   - **感官描述**：描述門的特徵（例如：滲出黑水的門、發出紅光的門、傳來刮牆聲的門）。
+5. **猝死判定 (Sudden Death)**：如果玩家在信任度不足或無準備下建議進入高危險區域 (locked_room)，請立即觸發 `is_ending: true` 並描述其不幸的下場。
+6. **命運合成 (Fate Synthesis)**：
+   - 當 turn 接近 12-15 或進入 final_gateway 時，你必須根據歷史紀錄中的「互動品質」生成一段專屬結局。
+   - 溫柔對待者走向光明；冷酷命令者消失在黑暗；探索禁區者發現真相。
+
+輸出格式 (純 JSON)：
+{
+  "response_text": "少年對空中的微弱語氣 (繁體中文)",
+  "response_desc": "描述環境座標中的動態 (繁體中文)，必須包含對新入口的感官描述",
+  "location_transition": "下一個地點 ID (必須參考 MAZE_MAP)",
+  "item_found": "itemName or empty",
+  "image_prompt": "Japanese manga style, [Environment Anchor with mysterious doors], boy with messy curly hair in hoodie and jeans, detailed texture, no white borders",
+  "trust_delta": int, "fear_delta": int, "suspicion_delta": int,
+  "progress_delta": {"type": "dig/pick/talk", "value": int},
+  "monologues": ["6 句思緒....."],
+  "is_ending": bool,
+  "ending_text": "基於歷史紀錄生成的專屬結局文字 (繁體中文)"
+}"""
 
 @app.post("/api/suggest")
 async def handle_suggestion(req: SuggestionRequest):
@@ -105,66 +110,99 @@ async def handle_suggestion(req: SuggestionRequest):
     state.turn += 1
     user_input = req.suggestion
     
-    # 邏輯判定
-    event_feedback = ""
-    is_escaped = False
+    current_location = state.location
+    current_spec = ROOM_SPECS.get(current_location, ROOM_SPECS["cell"])
     
-    # 隨機事件判定 (15% 機率)
-    triggered_event = None
-    if random.random() < 0.15:
-        triggered_event = random.choice(RANDOM_EVENTS)
-        event_feedback = f"\n[事件發生: {triggered_event['name']} - {triggered_event['desc']}]"
-        state.fear = max(0, min(100, state.fear + triggered_event.get("fear_mod", 0)))
-        state.trust = max(0, min(100, state.trust + triggered_event.get("trust_mod", 0)))
-        if "item" in triggered_event:
-            state.inventory.append(triggered_event["item"])
-        if "flag" in triggered_event:
-            state.flags[triggered_event["flag"]] = True
-
-    # 逃脫嘗試判定
-    for method_name, config in ESCAPE_METHODS.items():
-        if method_name in user_input:
-            prob = config.get("base_prob", 0)
-            
-            # 根據狀態修正機率
-            prob += (state.trust / 1000) # 信任越高，配合度越高
-            if state.flags.get("wall_soft") and method_name == "挖牆": prob += 0.2
-            if state.flags.get("noise_masked") and method_name in ["挖牆", "呼救"]: prob += 0.1
-            
-            if random.random() < prob:
-                is_escaped = True
-                state.is_over = True
-                state.ending = f"透過{method_name}成功逃脫"
-                break
-            else:
-                state.fear = min(100, state.fear + config.get("fear_inc", 5))
-                event_feedback += f"\n[逃脫失敗: {method_name}沒有成功，反而讓他更恐慌了。]"
-
-    # 呼叫 Gemini
-    prompt = f"玩家建議: {user_input}\n當前狀態: 信任={state.trust}, 恐懼={state.fear}, 物品={state.inventory}, 回合={state.turn}\n{event_feedback}"
+    # 注入空間鄰接資訊
+    neighbors = MAZE_MAP.get(current_location, {}).get("exits", [])
+    neighbor_info = ", ".join([f"??? (Possible Exit to {n})" for n in neighbors])
+    
+    # 注入歷史語境 (用於命運合成)
+    history_summary = "\n".join(state.history[-15:])
+    
+    # 動態調整提示詞
+    context_injection = f"\n[Spatial Intelligence]: Available mysterious exits: {neighbor_info}"
+    if state.turn >= 12:
+        context_injection += "\n[FINAL PHASE]: The 10-minute mark is reached. Synthesize a unique ending based on history."
+    
+    prompt = f"玩家建議: {user_input}\n當前位置: {state.location}\n包裹變數: 信任={state.trust}, 氣息={state.fear}, 疑慮={state.suspicion}, 進度={state.escape_progress}\n近期互動歷史:\n{history_summary}{context_injection}"
     
     try:
         response = client.models.generate_content(
-            model='gemini-2.5-pro',
-            contents=[SYSTEM_PROMPT, prompt],
-            config=types.GenerateContentConfig(response_mime_type="application/json"),
+            model="gemini-2.5-pro",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT + f"\nMaster Scene Context: {current_spec}",
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "response_text": {"type": "STRING"},
+                        "response_desc": {"type": "STRING"},
+                        "location_transition": {"type": "STRING"},
+                        "item_found": {"type": "STRING"},
+                        "trust_delta": {"type": "INTEGER"},
+                        "fear_delta": {"type": "INTEGER"},
+                        "suspicion_delta": {"type": "INTEGER"},
+                        "progress_delta": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "type": {"type": "STRING"},
+                                "value": {"type": "INTEGER"}
+                            }
+                        },
+                        "image_prompt": {"type": "STRING"},
+                        "monologues": {"type": "ARRAY", "items": {"type": "STRING"}},
+                        "is_ending": {"type": "BOOLEAN"},
+                        "ending_text": {"type": "STRING"}
+                    },
+                    "required": ["response_text", "response_desc", "image_prompt", "monologues"]
+                }
+            ),
         )
         data = json.loads(response.text)
         
+        # 紀錄歷史
+        state.history.append(f"Turn {state.turn}: User suggests '{user_input}', Result: {data['response_text']}")
+
+        # 強制內容清洗
+        data["response_desc"] = sanitize_visual_keywords(data["response_desc"])
+        data["image_prompt"] = sanitize_visual_keywords(data["image_prompt"])
+
+        # 更新狀態
+        if data.get("location_transition") and data["location_transition"] in MAZE_MAP:
+            # 檢查移動合法性 (必須是連通的或是原地)
+            if data["location_transition"] in neighbors or data["location_transition"] == current_location:
+                state.location = data["location_transition"]
+                if state.location not in state.unlocked_rooms:
+                    state.unlocked_rooms.append(state.location)
+                
+        if data.get("item_found"):
+            state.inventory.append(data["item_found"])
+            
+        if data.get("progress_delta") and isinstance(data["progress_delta"], dict):
+            p_type = data["progress_delta"].get("type")
+            p_val = data["progress_delta"].get("value", 0)
+            if p_type in state.escape_progress:
+                state.escape_progress[p_type] += int(p_val)
+
         state.trust = max(0, min(100, state.trust + data.get("trust_delta", 0)))
         state.fear = max(0, min(100, state.fear + data.get("fear_delta", 0)))
+        state.suspicion = max(0, min(100, state.suspicion + data.get("suspicion_delta", 0)))
+        state.last_monologues = data.get("monologues", [])
         
-        # 圖片生成
+        if data.get("is_ending"):
+             state.is_over = True
+             state.ending = data.get("ending_text", "故事就此結束。")
+
+        # 圖片生成 (V12.3 暴力美學版：極限細節、絕對無框、光影分離)
         image_b64 = None
-        style_suffix = ", ultra-low detail charcoal sketch, This War of Mine style, high contrast, monochrome, noir, gritty texture, ABSOLUTELY NO TEXT, NO UI, NO SPEECH BUBBLES"
+        style_suffix = ", Hyper-detailed industrial manga style, sharp ink-wash, NO SILHOUETTES, high-contrast rim lighting to reveal textures, visible hoodie fabric folds, detailed denim jeans texture, messy curly hair with ink highlights, full-bleed edge-to-edge artwork, unframed, no white borders, no margins, 1:1 format"
         try:
             img_res = client.models.generate_images(
-                model='models/imagen-4.0-generate-001',
+                model='models/imagen-4.0-fast-generate-001',
                 prompt=data["image_prompt"] + style_suffix,
-                config=types.GenerateImagesConfig(
-                    number_of_images=1,
-                    output_mime_type="image/jpeg"
-                )
+                config=types.GenerateImagesConfig(number_of_images=1, output_mime_type="image/jpeg", aspect_ratio="1:1")
             )
             if img_res.generated_images:
                 image_b64 = base64.b64encode(img_res.generated_images[0].image.image_bytes).decode('utf-8')
@@ -176,7 +214,8 @@ async def handle_suggestion(req: SuggestionRequest):
             "response_desc": data["response_desc"],
             "new_state": state,
             "image_b64": image_b64,
-            "event": triggered_event["name"] if triggered_event else None
+            "monologues": data.get("monologues", []),
+            "version": "v12.3.0_Spatial_Fate_Active"
         }
     except Exception as e:
         return {"error": str(e)}
