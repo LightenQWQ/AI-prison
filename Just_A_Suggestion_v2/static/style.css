@@ -265,6 +265,7 @@ body {
     background: #000;
     border: 1px solid #111;
     overflow: hidden;
+    aspect-ratio: 16 / 9; /* V13.3 Widescreen Rebirth */
 }
 
 #scene-container::after {
