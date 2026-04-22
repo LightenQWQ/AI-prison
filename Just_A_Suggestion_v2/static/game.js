@@ -164,8 +164,10 @@ const introSequence = [
 ];
 
 let introIndex = 0;
+let isSkippingPrologue = false;
 
 async function startGame() {
+    isSkippingPrologue = false;
     // 初始化聲音與引擎
     soundManager = new SoundManager();
     waveEngine = new WaveformEngine();
@@ -181,6 +183,20 @@ async function startGame() {
     // 2. 播放夢境序章
     await playDreamSequence();
 
+    if (isSkippingPrologue) {
+        // 極速模式：直接跳過所有過場特效，顯示最後一幕的文字與圖片
+        soundManager.playBGM('game');
+        document.getElementById('scene-image').style.display = 'block';
+        document.getElementById('scene-image').style.opacity = '1';
+        const lastIntro = introSequence[introSequence.length - 1];
+        updateUI({
+            response_text: lastIntro.text,
+            response_desc: lastIntro.desc,
+            image_url: lastIntro.img
+        });
+        return; // 結束啟動流程，直接可遊玩
+    }
+
     // 3. 監視器啟動故障 (Glitch)
     triggerBootGlitch();
     soundManager.playGlitch();
@@ -195,17 +211,35 @@ async function playDreamSequence() {
     overlay.style.display = 'flex';
     
     for (let text of dreamSequence) {
+        if (isSkippingPrologue) break;
         const p = document.createElement('p');
         p.className = 'dream-text';
         p.innerText = text;
-        overlay.innerHTML = '';
+        overlay.innerHTML = '<div id="skip-btn" onclick="skipPrologue()">SKIP >></div>';
         overlay.appendChild(p);
-        await new Promise(resolve => setTimeout(resolve, 4000));
+        
+        // 分段等待，以便在 4 秒內隨時可以被跳過中斷
+        for(let i=0; i<40; i++) {
+            if (isSkippingPrologue) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
     }
     
-    overlay.style.transition = 'opacity 0.5s';
-    overlay.style.opacity = '0';
-    setTimeout(() => overlay.style.display = 'none', 500);
+    if (!isSkippingPrologue) {
+        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.style.opacity = '1';
+        }, 500);
+    }
+}
+
+function skipPrologue() {
+    isSkippingPrologue = true;
+    const overlay = document.getElementById('prologue-overlay');
+    // 瞬間消失，不播動畫
+    overlay.style.display = 'none';
 }
 
 function triggerBootGlitch() {
