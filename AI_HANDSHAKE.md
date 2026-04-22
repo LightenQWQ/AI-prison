@@ -1,15 +1,17 @@
-# AI Handshake: Project "Just A Suggestion" (v12.6.0 Noir Comic Edition)
+# AI Handshake: Project "Just A Suggestion" (v19.0 Extreme Square Edition)
 
 > **To the next Antigravity / AI Agent:**
 > Read this document to perfectly preserve the technical state and aesthetic intent of this project.
 
 ## 📌 Technical Baseline
 - **Core Models**:
-    - **Logic/Text**: `models/gemini-2.1-pro` / `gemini-2.5-pro` (Used for psychological depth).
-    - **Visuals**: `models/imagen-4.0-generate-001` (Imagen 4.0).
-- **Style Definition**: `American Noir Comic style, high contrast ink drawing, heavy black ink brushstrokes, gritty textures, stark monochrome, dramatic cinematic lighting, Chiaroscuro`.
-- **Backend**: FastAPI (Python 3.10+) running on Port `8001`.
-- **Environment**: Docker container `ai-prison-workspace`.
+    - **Logic/Text**: `gemini-2.5-pro` (Used for psychological depth).
+    - **Visuals**: Local SD Forge (`localhost:7860`) using `txt2img` API.
+- **Visual Engine**: Extreme Square Engine (512x512), optimized for RTX 4060.
+- **Visual Consistency**: IP-Adapter Plus (`ip-adapter-plus_sd15`) with `intro_start.png` reference.
+- **LoRA**: `darksketch` (monochrome charcoal/ink style).
+- **Backend**: FastAPI (Python 3.10+) running on Port `8002`.
+- **Environment**: Local Development / Docker Sync.
 
 ## 🎨 Visual & Directorial Guardrails (CRITICAL)
 - **Character Bible**: The boy is an "18-year-old youth with messy dark hair, slim build, wearing a dark hoodie."
