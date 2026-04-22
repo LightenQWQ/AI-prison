@@ -158,9 +158,9 @@ const dreamSequence = [
 ];
 
 const introSequence = [
-    { text: "訊號同步中：連線成功。", desc: "(你感覺到自己正透過某種視角，凝視著陰影中的秘密)", img: "assets/intro_1.png" },
-    { text: "畫面中：一個少年縮在冰冷的地下室角落。", desc: "(他的呼吸微弱，卻讓你有種莫名的熟悉感)", img: "assets/intro_boy_v8.png" },
-    { text: "這是我能觸及的人...我也許在那裡見過他。", desc: "(試著將你的思緒傳遞給他)", img: "assets/intro_radio_v8.png" }
+    { text: "....", desc: "訊號同步中：連線成功。", img: "assets/intro_start.png" },
+    { text: "....", desc: "畫面啟動：一個少年縮在神祕解謎空間的角落，陷入深沉的睡眠。", img: "assets/intro_start.png" },
+    { text: "....", desc: "監視器運轉聲中，他的氣息平穩。試著發出訊號，引導他的潛意識。", img: "assets/intro_start.png" }
 ];
 
 let introIndex = 0;
@@ -172,6 +172,7 @@ async function startGame() {
     
     // 1. 隱藏主遮罩
     document.getElementById('overlay').classList.add('fading');
+    document.getElementById('monitor-osd-bar').style.display = 'flex';
     setTimeout(() => {
         document.getElementById('overlay').style.display = 'none';
         soundManager.playBGM('intro');
@@ -238,7 +239,13 @@ function updateUI(data) {
     if (data.response_desc) document.getElementById('desc-content').innerText = data.response_desc;
     
     if (data.image_b64) {
-        document.getElementById('scene-image').src = "data:image/jpeg;base64," + data.image_b64;
+        console.log("Received new image, length:", data.image_b64.length);
+        const sceneImg = document.getElementById('scene-image');
+        sceneImg.style.opacity = "0"; // 先隱藏
+        setTimeout(() => {
+            sceneImg.src = "data:image/png;base64," + data.image_b64; // 改為 PNG
+            sceneImg.style.opacity = "1"; // 再顯現
+        }, 300);
     } else if (data.image_url) {
         document.getElementById('scene-image').src = data.image_url;
     }
@@ -260,10 +267,23 @@ function updateUI(data) {
 function updateLocationDisplay(loc) {
     const el = document.getElementById('location-display');
     if (!el) return;
-    const channels = { "cell": "01", "hallway": "02", "storage": "03", "locked_room": "04" };
+    const channels = { "puzzle_room": "01", "hallway": "02", "storage": "03", "locked_room": "04" };
     const ch = channels[loc] || "XX";
     el.innerText = `CCTV CH-${ch} | ${loc.replace('_', ' ')}`;
 }
+
+// 呼吸感點點循環引擎 (V15.5)
+let globalDotCount = 1;
+setInterval(() => {
+    const textEl = document.getElementById('text-content');
+    if (!textEl) return;
+    
+    // 只有當內容全是點點時（代表少年沈睡或思考中），才觸發循環
+    if (/^\.*$/.test(textEl.innerText)) {
+        globalDotCount = (globalDotCount % 5) + 1;
+        textEl.innerText = ".".repeat(globalDotCount);
+    }
+}, 600);
 
 function triggerCameraGlitch(newLoc) {
     const sceneImg = document.getElementById('scene-image');
@@ -337,15 +357,22 @@ async function sendSuggestion() {
                      ? gameState.last_monologues 
                      : DEFAULT_MONOLOGUES;
     let monologueIdx = 0;
+    let dotCount = 1;
     
     const rotateMonologue = () => {
         const rawText = monologuePool[monologueIdx % monologuePool.length];
-        textContent.innerText = rawText + "...";
-        monologueIdx++;
+        const dots = ".".repeat(dotCount);
+        textContent.innerText = rawText + dots;
+        
+        dotCount++;
+        if (dotCount > 5) {
+            dotCount = 1;
+            monologueIdx++;
+        }
     };
     
     rotateMonologue();
-    const monologueInterval = setInterval(rotateMonologue, 3000);
+    const monologueInterval = setInterval(rotateMonologue, 600); // 600ms * 5 dots = 3 seconds per cycle
 
     try {
         const response = await fetch('/api/suggest', {
