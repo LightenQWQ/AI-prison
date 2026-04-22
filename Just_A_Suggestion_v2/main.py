@@ -7,6 +7,7 @@ import base64
 import re
 import io
 import httpx
+import time
 from PIL import Image
 from dotenv import load_dotenv
 
@@ -40,26 +41,36 @@ class SuggestionRequest(BaseModel):
     suggestion: str
     state: GameState
 
+def extract_json(text: str):
+    """強健的 JSON 解析機制，防止 Gemini 輸出格式干擾"""
+    try:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            return json.loads(match.group())
+        return json.loads(text)
+    except Exception:
+        return {
+            "response_text": "我...我不知道該說什麼。",
+            "emotion_keywords": "neutral",
+            "fear_level": 0.5,
+            "image_prompt": "a boy in a hoodie looking confused",
+            "is_ending": False
+        }
+
 def sanitize_for_hardboiled(action_prompt: str, emotion_keywords: str, fear_level: float = 0.5) -> str:
-    """V20.0 情感化渲染引擎：動態 LoRA 權重與風格映射"""
-    # 根據恐懼等級動態調整 LoRA 權重 (0.6 ~ 1.2)
-    lora_weight = 0.6 + (float(fear_level) * 0.6)
+    """V21.0 情感渲染引擎：Chiaroscuro 光影與視覺干擾"""
+    lora_w = 0.6 + (float(fear_level) * 0.6)
     
-    # 情緒視覺映射
-    emotion_map = {
-        "despair": "heavy shadows, weeping eyes, trembling, cinematic lighting",
-        "paranoid": "looking back, wide eyes, messy hatching, dark fog",
-        "resolute": "determined look, sharp contrast, stable lines",
-        "fear": "void in background, abstract shadows, glitch art style, chaotic lines",
-        "neutral": "soft lighting, calm shadows"
-    }
-    style_suffix = emotion_map.get(emotion_keywords.lower(), "cinematic lighting")
+    # 動態視覺干擾 (高恐懼時線條崩潰)
+    noise_tags = ""
+    if fear_level > 0.8:
+        noise_tags = "(sketchy:1.5), (charcoal lines:1.3), (distorted:1.2), (motion blur:1.1),"
     
-    background_anchor = "detailed background, ruined underground basement with leaking pipes, industrial noir"
-    style_suite = f"(masterpiece, top quality:1.2), (darksketch style:{1.0 + fear_level*0.5:.1f}), (noir manga:1.4), (ink sketch:1.3), (heavy shadows:{1.0 + fear_level*0.5:.1f}), (high contrast:1.4)"
+    # 黑色電影光影映射
+    lighting = "harsh spotlight, deep blacks" if fear_level < 0.8 else "flickering light, drowning in shadows"
     
-    final = f"{style_suffix}, {action_prompt}, {style_suite}, {background_anchor}, (square composition:1.2), <lora:darksketch:{lora_weight:.1f}>, monochrome"
-    return final
+    style_suite = f"(masterpiece:1.2), noir manga style, <lora:darksketch:{lora_w:.1f}>, {noise_tags} {lighting}, monochrome"
+    return f"{style_suite}, {action_prompt}, 1male, solo, high contrast"
 
 def prepare_control_images():
     """將參考圖補邊成正方形，並返回原始圖與補邊圖的 Base64"""
@@ -107,12 +118,13 @@ async def handle_suggestion(req: SuggestionRequest):
     
     try:
         # Step 1: Gemini 思考
+        start_time = time.time()
         response = client.models.generate_content(
             model="gemini-flash-latest",
             contents=f"位置: {state.location}\n玩家輸入: {req.suggestion}",
             config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT, response_mime_type="application/json"),
         )
-        data = json.loads(response.text[response.text.find('{'):])
+        data = extract_json(response.text)
         
         # Step 2: 情感化渲染預處理
         emotion = data.get("emotion_keywords", "neutral")
@@ -120,13 +132,16 @@ async def handle_suggestion(req: SuggestionRequest):
         final_prompt = sanitize_for_hardboiled(data.get("image_prompt", ""), emotion, fear_level)
         orig_b64, sq_b64 = prepare_control_images()
         
-        # Step 3: 原生方圖 Payload (極速版)
+        # 動態 IP-Adapter 權重：恐懼越高，角色越不穩定 (0.7 -> 0.3)
+        ipa_weight = 0.7 - (fear_level * 0.4) if fear_level > 0.5 else 0.7
+        
+        # Step 3: 本地顯卡 Payload
         payload = {
             "prompt": final_prompt,
             "negative_prompt": "(color:1.4), (chromatic:1.3), low quality, bad anatomy, yellow, green, red, blue",
             "steps": 18,
-            "width": 512,             # 512 原生解析度
-            "height": 512,            # 512 原生解析度
+            "width": 512,
+            "height": 512,
             "cfg_scale": 7.0,
             "sampler_name": "DPM++ 2M Karras",
             "alwayson_scripts": {
@@ -137,7 +152,7 @@ async def handle_suggestion(req: SuggestionRequest):
                             "module": "CLIP-ViT-H (IPAdapter)", 
                             "model": "ip-adapter-plus_sd15 [c817b455]",
                             "image": sq_b64, 
-                            "weight": 0.7, 
+                            "weight": ipa_weight, 
                             "resize_mode": "Just Resize"
                         }
                     ]
@@ -150,11 +165,16 @@ async def handle_suggestion(req: SuggestionRequest):
             sd_res = await httpx_client.post(url=f'{SD_API_URL}/sdapi/v1/txt2img', json=payload, timeout=60.0)
             image_b64 = sd_res.json()["images"][0] if sd_res.status_code == 200 else None
 
+        latency = time.time() - start_time
         return {
             "response_text": data["response_text"],
-            "response_desc": f"情緒: {emotion} | 恐懼值: {fear_level}",
+            "response_desc": f"情緒: {emotion} | 恐懼值: {fear_level} | 耗時: {latency:.2f}s",
             "new_state": state,
-            "image_b64": image_b64
+            "image_b64": image_b64,
+            "performance": {
+                "latency": latency,
+                "gpu": "RTX 4060 (Local)"
+            }
         }
     except Exception as e:
         return {"error": str(e)}
