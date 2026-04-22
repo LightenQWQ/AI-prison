@@ -40,12 +40,25 @@ class SuggestionRequest(BaseModel):
     suggestion: str
     state: GameState
 
-def sanitize_for_hardboiled(action_prompt: str, emotion_keywords: str) -> str:
-    """V19.0 原生方圖流水線：512x512 構圖優化"""
+def sanitize_for_hardboiled(action_prompt: str, emotion_keywords: str, fear_level: float = 0.5) -> str:
+    """V20.0 情感化渲染引擎：動態 LoRA 權重與風格映射"""
+    # 根據恐懼等級動態調整 LoRA 權重 (0.6 ~ 1.2)
+    lora_weight = 0.6 + (float(fear_level) * 0.6)
+    
+    # 情緒視覺映射
+    emotion_map = {
+        "despair": "heavy shadows, weeping eyes, trembling, cinematic lighting",
+        "paranoid": "looking back, wide eyes, messy hatching, dark fog",
+        "resolute": "determined look, sharp contrast, stable lines",
+        "fear": "void in background, abstract shadows, glitch art style, chaotic lines",
+        "neutral": "soft lighting, calm shadows"
+    }
+    style_suffix = emotion_map.get(emotion_keywords.lower(), "cinematic lighting")
+    
     background_anchor = "detailed background, ruined underground basement with leaking pipes, industrial noir"
-    style_suite = "(masterpiece, top quality:1.2), (darksketch style:1.5), (noir manga:1.4), (ink sketch:1.3), (heavy shadows:1.3), (high contrast:1.4)"
-    # 移除 16:9，加入 square composition 權重
-    final = f"{emotion_keywords}, {action_prompt}, {style_suite}, {background_anchor}, (square composition:1.2), <lora:darksketch:0.8>, monochrome"
+    style_suite = f"(masterpiece, top quality:1.2), (darksketch style:{1.0 + fear_level*0.5:.1f}), (noir manga:1.4), (ink sketch:1.3), (heavy shadows:{1.0 + fear_level*0.5:.1f}), (high contrast:1.4)"
+    
+    final = f"{style_suffix}, {action_prompt}, {style_suite}, {background_anchor}, (square composition:1.2), <lora:darksketch:{lora_weight:.1f}>, monochrome"
     return final
 
 def prepare_control_images():
@@ -73,7 +86,19 @@ def prepare_control_images():
     
     return orig_b64, sq_b64
 
-SYSTEM_PROMPT = """您是「地下室空間觀察者」。輸出 JSON：{ "response_text", "emotion_keywords", "image_prompt", "is_ending" }"""
+SYSTEM_PROMPT = """
+您是「地下室空間觀察者」。
+角色是一個穿著連帽衫的憂鬱少年。
+請根據玩家輸入，輸出 JSON：
+{
+  "response_text": "角色的回應對話",
+  "emotion_keywords": "情緒標籤 [despair, paranoid, resolute, fear, neutral]",
+  "fear_level": 0.0 ~ 1.0 之間的浮點數,
+  "image_prompt": "給 SD 的視覺描述",
+  "is_ending": false
+}
+注意：當 fear_level 很高時，敘事應該變得『不可靠』或因為恐懼而產生視覺上的扭曲描述。
+"""
 
 @app.post("/api/suggest")
 async def handle_suggestion(req: SuggestionRequest):
@@ -89,9 +114,10 @@ async def handle_suggestion(req: SuggestionRequest):
         )
         data = json.loads(response.text[response.text.find('{'):])
         
-        # Step 2: 圖片預處理
-        emotion_kws = data.get("emotion_keywords", "distressed")
-        final_prompt = sanitize_for_hardboiled(data["image_prompt"], emotion_kws)
+        # Step 2: 情感化渲染預處理
+        emotion = data.get("emotion_keywords", "neutral")
+        fear_level = data.get("fear_level", 0.5)
+        final_prompt = sanitize_for_hardboiled(data.get("image_prompt", ""), emotion, fear_level)
         orig_b64, sq_b64 = prepare_control_images()
         
         # Step 3: 原生方圖 Payload (極速版)
@@ -126,7 +152,7 @@ async def handle_suggestion(req: SuggestionRequest):
 
         return {
             "response_text": data["response_text"],
-            "response_desc": f"情緒狀態: {emotion_kws}",
+            "response_desc": f"情緒: {emotion} | 恐懼值: {fear_level}",
             "new_state": state,
             "image_b64": image_b64
         }
