@@ -31,6 +31,7 @@
 - 2026-04-18 : 實裝「漫畫大師級分鏡引擎 (V12.5.10)」，導入防幻覺協議、視覺特徵鎖定與極端快取破除機制，解決圖片重複與破圖問題。
 - 2026-04-21 : 完成「V13.8 Vertex AI 雲端遷徙」，接入 $41,539 TWD 額度，並實裝「HAMP 藝術避險協定」解決生圖封鎖問題。
 - 2026-04-23 : 升級「只是一個建議」至 V19.0 「極速方圖版」，解析度鎖定 512x512，整合本地 SD Forge (RTX 4060) 與 IP-Adapter 視覺特徵鎖定。
+- 2026-04-24 : 完成「Noir 內在視角 (Inner Perspective)」UI 革命，全面移除監視器元素，改為沉浸式漂浮 HUD。實裝「視覺引擎 2.0」，原生支持 16:9 電影比例並徹底消除漫畫網點 (Halftone)。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
@@ -45,7 +46,9 @@
 | 2026-04-16 | infra | Migrated Cloud Server to new IP: `35.236.173.176` (Port 8000/8001) | high | [VERIFIED] Live connection | - | Active | - | - |
 | 2026-04-21 | web | Migrated Image Engine to Vertex AI (Imagen 3.0) for credit usage | high | [VERIFIED] Cloud logs | - | Active | - | - |
 | 2026-04-21 | web | Implemented HAMP protocol (Artistic Metaphors) to bypass safety filters | high | [VERIFIED] Metaphor tests | - | Active | - | - |
-| 2026-04-23 | infra | Implemented Hybrid Cloud-Local Architecture (Gemini Cloud + Local RTX 4060) | high | [VERIFIED] v19.0 Integration | - | Active | - | - |
+| 2026-04-23 | infra | Implemented Hybrid Cloud-Local Architecture (Gemini Cloud + Local RTX 4060) | high | [VERIFIED] | - | Active | - | - |
+| 2026-04-24 | web | Migrated to "Inner Perspective" UI (Invisible Dashboard, 16:9 Native) | high | [VERIFIED] | - | Active | - | - |
+| 2026-04-24 | web | Upgraded Visual Engine 2.0 (No-Halftone, Cinematic Noir DNA) | high | [VERIFIED] | - | Active | - | - |
 ## 🔐 Environment Variables Protocol
 - All secrets MUST live in `.env` (never hardcode in source).
 - `.env.example` is the template — it contains only keys, no real values.
