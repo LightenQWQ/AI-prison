@@ -4,73 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Just a Suggestion | 只是一個建議</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style_v21_final.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 </head>
-<body>
+    <!-- 全域降雨效果層 -->
+    <canvas id="rain-canvas" style="position: fixed; inset: 0; z-index: 600; pointer-events: none; opacity: 0.4;"></canvas>
+
     <div id="overlay">
-        <img src="assets/cover_v3.png" style="width: 400px; height: auto; margin-bottom: 20px; border: 1px solid #333;">
-        <div class="glitch-wrapper">
-            <h1 class="glitch" data-text="JUST A SUGGESTION">JUST A SUGGESTION</h1>
+        <!-- 全螢幕動態影片背景 -->
+        <video id="cover-video" autoplay muted loop playsinline style="
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: brightness(0.5) contrast(1.2) grayscale(0.2);
+            z-index: 0;
+        ">
+            <source src="assets/video.mp4" type="video/mp4">
+        </video>
+
+        <!-- 腦內聲音雜訊：局部掃描線效果 (位於畫面中上方) -->
+        <div class="consciousness-glitch" style="
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 300px;
+            background: repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.03) 1px, rgba(255,255,255,0.03) 2px);
+            z-index: 1; pointer-events: none;
+            mask-image: radial-gradient(circle, black 30%, transparent 70%);
+            mix-blend-mode: overlay;
+        "></div>
+
+        <!-- 畫面暈影 (Vignetting) -->
+        <div style="
+            position: absolute; inset: 0;
+            background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.7) 100%);
+            z-index: 2; pointer-events: none;
+        "></div>
+
+        <!-- [文字錯位佈局] -->
+        
+        <!-- 左上角低語 -->
+        <div style="
+            position: absolute; top: 8vh; left: 6vw; z-index: 5;
+            color: rgba(120, 120, 120, 0.5);
+            font-family: 'EB Garamond', serif; font-style: italic;
+            font-size: 0.85rem; letter-spacing: 5px;
+            animation: text-float 8s ease-in-out infinite;
+        ">那個聲音⋯⋯</div>
+
+        <!-- 右下角回響 -->
+        <div style="
+            position: absolute; bottom: 12vh; right: 8vw; z-index: 5;
+            color: rgba(120, 120, 120, 0.5);
+            font-family: 'EB Garamond', serif; font-style: italic;
+            font-size: 0.85rem; letter-spacing: 5px;
+            animation: text-float 8s ease-in-out infinite reverse;
+        ">⋯⋯是你，還是我？</div>
+
+        <!-- 核心內容區 -->
+        <div style="
+            position: relative; z-index: 4;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100%; width: 100%;
+        ">
+            <!-- [響應式標題] 寬屏單行，豎屏雙行 -->
+            <div style="margin-top: 35vh; width: 100%; text-align: center; padding: 0 5vw; box-sizing: border-box;">
+                <div class="title-ink-wrapper">
+                    <h1 class="ink-title">
+                        JUST A<br class="br-mobile"> SUGGESTION
+                    </h1>
+                </div>
+            </div>
+
+            <!-- [去框化按鈕] -->
+            <div style="margin-top: auto; padding-bottom: 10vh;">
+                <button class="btn-terminal" onclick="startGame()">
+                    [ 建立連線 ]
+                </button>
+            </div>
         </div>
-        <p style="color: #aaa; margin-bottom: 40px; letter-spacing: 4px; font-weight: 300; text-shadow: 0 0 10px rgba(255,255,255,0.3);">你還記得，你為什麼在這裡嗎？</p>
-        <button class="btn-start" onclick="startGame()">建立連線</button>
     </div>
 
-    <div id="game-container">
-        <header id="monitor-dashboard">
-            <div class="monitor-item">
-                <div class="wave-label-container">
-                    <svg class="anatomical-brain" viewBox="0 0 200 200" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M100 180c-40 0-70-30-70-70 0-25 15-45 35-55-5-15 0-35 15-45 20-15 45-10 55 5 10-15 35-20 55-5 15 10 20 30 15 45 20 10 35 30 35 55 0 40-30 70-70 70z"></path>
-                        <path d="M100 30v150M70 50c10-5 20-5 30 0M130 50c-10-5-20-5-30 0M60 110c15-10 30-10 45 0M140 110c-15-10-30-10-45 0"></path>
-                        <circle cx="100" cy="110" r="2" fill="currentColor"></circle>
-                    </svg>
-                    <span class="vitals-label">SYNC / EEG</span>
-                </div>
-                <div class="canvas-wrapper">
-                    <canvas id="eeg-canvas"></canvas>
-                    <div class="monitor-text"><span id="sync-value">30</span>%</div>
-                </div>
-            </div>
+    <div id="game-container" style="border: none; box-shadow: none; padding: 0; width: 100vw; height: 100vh; max-width: none;">
+        <!-- 儀表板改為隱藏狀態，保留 DOM 供 JS 更新數據，但不再顯示 -->
+        <header id="monitor-dashboard" style="display: none;"></header>
+
+        <div id="scene-container" style="flex: 1; border: none; margin: 0; max-height: none; background: #000;">
+            <!-- 移除 OSD 條 -->
+            <div id="monitor-osd-bar" style="display: none;"></div>
             
-            <div class="monitor-item">
-                <div class="wave-label-container">
-                    <svg class="anatomical-heart" viewBox="0 0 200 200" fill="currentColor">
-                        <path d="M145 55c-5-15-20-30-40-20-5-10-20-15-30-10-15-10-35 0-35 25 0 20 15 35 35 55 10 10 20 20 30 35 10-15 20-25 30-35 15-15 25-30 25-50zM100 170c-30-40-60-70-60-110 0-30 25-55 55-45 5-5 15-10 25-5 15-10 40 5 40 35 0 35-25 70-60 125z"></path>
-                        <path d="M85 30l-5 15M115 30l5 15M135 65l15 5" stroke="currentColor" stroke-width="2"></path>
-                    </svg>
-                    <span class="vitals-label">HR / ECG</span>
-                </div>
-                <div class="canvas-wrapper">
-                    <canvas id="ecg-canvas"></canvas>
-                    <div class="monitor-text danger"><span id="hr-value">75</span> BPM</div>
-                </div>
-            </div>
-        </header>
-
-        <div id="scene-container">
-            <div id="monitor-osd-bar" style="display: none;">
-                <span class="osd-text"><span class="osd-line">|</span> CCTV CH-01 | CELL</span>
-                <span id="rec-indicator">● REC</span>
-            </div>
-            <img id="scene-image" src="" alt="Game Scene">
+            <img id="scene-image" src="" alt="Game Scene" style="mask-image: radial-gradient(circle, black 60%, transparent 95%); -webkit-mask-image: radial-gradient(circle, black 60%, transparent 95%); filter: contrast(1.1) brightness(0.9); object-fit: cover;">
             <div id="memory-fragment"></div>
-            <div class="vignette"></div>
+            <div class="vignette" style="background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.9) 100%);"></div>
             <div id="noise-layer"></div>
-            <div class="panel-border"></div>
+            <div class="panel-border" style="display: none;"></div>
         </div>
 
-        <div id="dialogue-box">
-            <div id="status-indicator" style="float: right; font-family: monospace; font-size: 0.7rem; color: #444;">[SYNCED]</div>
-            <div id="speaker">青年</div>
-            <p id="text-content">......</p>
-            <p id="desc-content"></p>
+        <div id="dialogue-box" style="background: transparent; border: none; text-align: center; padding: 20px 10%; margin-bottom: 20px;">
+            <div id="status-indicator" style="font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.1); letter-spacing: 5px; margin-bottom: 10px;">[SYNCED]</div>
+            <div id="speaker" style="font-family: 'Courier New', monospace; color: #444; font-size: 0.75rem; letter-spacing: 6px; margin-bottom: 15px; text-transform: uppercase;">青年</div>
+            <p id="text-content" style="font-family: 'EB Garamond', serif; font-size: 1.25rem; line-height: 1.8; color: #999; font-style: italic; text-shadow: 0 0 20px rgba(0,0,0,1);">......</p>
         </div>
+        <p id="narrator-text" style="color: #333; text-align: center; font-size: 0.75rem; letter-spacing: 2px; font-style: italic;"></p>
 
-        <div id="input-area">
-            <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off">
-            <button id="submit-btn" onclick="sendSuggestion()">低語</button>
+        <div id="input-area" style="width: 50%; max-width: 500px; margin: 0 auto 50px auto; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0;">
+            <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off" style="background: transparent; border: none; color: #fff; font-family: 'Courier New', monospace; font-size: 0.9rem; padding: 10px; width: 100%; outline: none; letter-spacing: 2px;">
+            <button id="submit-btn" onclick="sendSuggestion()" style="background: transparent; border: none; color: #444; font-family: 'Courier New', monospace; letter-spacing: 4px; cursor: pointer; text-transform: uppercase; font-size: 0.75rem;">Enter</button>
         </div>
         
         <div id="inventory-display" style="margin-top: 10px; font-size: 0.8rem; color: #555;">
@@ -87,6 +124,31 @@
         <div id="skip-btn" onclick="skipPrologue()">SKIP >></div>
     </div>
 
+    <script>
+        // 優化影片循環效果：減少結尾重置時的閃爍感
+        window.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('cover-video');
+            if (video) {
+                // 監控影片時間，在快結束前 0.5 秒開始淡出
+                video.addEventListener('timeupdate', function() {
+                    const buffer = 0.5;
+                    if (video.duration - video.currentTime < buffer) {
+                        video.style.opacity = '0';
+                        video.style.transition = 'opacity 0.5s ease';
+                    } else if (video.currentTime < buffer) {
+                        video.style.opacity = '1';
+                    }
+                });
+
+                // 影片結束時瞬間回到開頭並重新播放，同時恢復透明度
+                video.onended = function() {
+                    video.currentTime = 0.1; // 避開可能存在的檔案頭部空白
+                    video.play();
+                    video.style.opacity = '1';
+                };
+            }
+        });
+    </script>
     <script src="game.js"></script>
 </body>
 </html>

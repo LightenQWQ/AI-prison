@@ -1,0 +1,372 @@
+:root {
+    --bg-color: #050505;
+    --text-color: #d1d1d1;
+    --accent-color: #222;
+    --danger-color: #8b0000;
+    --trust-color: #2f4f4f;
+    --font-main: 'Noto Sans TC', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-main);
+    overflow: hidden;
+    height: 100dvh; /* 使用動態視窗高度 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#game-container {
+    width: 98vw;
+    max-width: 1200px;
+    height: 98dvh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(0.5rem, 2vh, 1.5rem);
+    background: #000;
+    border: 1px solid #1a1a1a;
+    box-shadow: 0 0 100px rgba(0,0,0,1);
+    opacity: 1;
+}
+
+/* 夢境序章 */
+#prologue-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 200;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #eee;
+    font-size: 1.5rem;
+    letter-spacing: 5px;
+    text-align: center;
+    padding: 2em;
+}
+
+#skip-btn {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 0.8rem;
+    color: #444;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border: 1px solid #222;
+    padding: 5px 15px;
+    transition: all 0.3s;
+    z-index: 210;
+}
+
+#skip-btn:hover {
+    color: #888;
+    border-color: #555;
+    background: rgba(255,255,255,0.05);
+}
+
+.dream-text {
+    opacity: 0;
+    animation: dream-fade 4s ease-in-out forwards;
+}
+
+@keyframes dream-fade {
+    0% { opacity: 0; filter: blur(10px); }
+    30% { opacity: 1; filter: blur(0px); }
+    70% { opacity: 1; filter: blur(0px); }
+    100% { opacity: 0; filter: blur(5px); }
+}
+
+/* 監視器啟動故障效果 */
+.power-on-glitch {
+    animation: glitch-boot 0.8s steps(1) infinite;
+}
+
+@keyframes glitch-boot {
+    0% { opacity: 0; transform: scale(1.1) skew(5deg); filter: brightness(2) contrast(2); }
+    10% { opacity: 1; transform: scale(1) skew(0deg); filter: none; }
+    20% { opacity: 0.5; transform: translate(10px, -5px); }
+    30% { opacity: 1; filter: hue-rotate(90deg); }
+    40% { opacity: 0; }
+    50% { opacity: 1; transform: scaleY(0.1); }
+    60% { opacity: 1; transform: scaleY(1); }
+    100% { opacity: 1; }
+}
+
+/* 遮罩/開場效果 */
+#overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 1.5s ease;
+}
+
+#overlay img {
+    mask-image: radial-gradient(circle, black 50%, transparent 100%);
+    filter: contrast(1.5) grayscale(1) brightness(0.7);
+    margin-bottom: 20px;
+    width: 50% !important;
+    max-width: 500px;
+}
+
+/* 墨跡化標題樣式 */
+.title-ink-wrapper {
+    display: inline-block;
+    filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
+}
+
+.ink-title {
+    font-family: 'EB Garamond', serif;
+    font-size: clamp(1.8rem, 6vw, 3.8rem);
+    font-weight: 700;
+    letter-spacing: 15px;
+    margin-right: -15px;
+    color: #fff;
+    text-transform: uppercase;
+    font-style: italic;
+    animation: ink-breathe 8s ease-in-out infinite;
+    text-shadow: 0 0 20px rgba(0,0,0,0.9), 0 5px 30px rgba(0,0,0,0.8);
+    display: inline-block;
+    white-space: nowrap;
+}
+
+/* 響應式：豎屏時允許換行並縮小字級 */
+@media (max-aspect-ratio: 1/1) {
+    .ink-title {
+        white-space: normal;
+        line-height: 1.2;
+        letter-spacing: 10px;
+        margin-right: -10px;
+        font-size: clamp(2rem, 10vw, 3rem);
+    }
+    .br-mobile { display: block !important; }
+}
+
+@media (min-aspect-ratio: 1/1) {
+    .br-mobile { display: none !important; }
+}
+
+@keyframes ink-breathe {
+    0%, 100% { opacity: 0.5; filter: blur(1.5px); letter-spacing: 22px; }
+    50% { opacity: 0.85; filter: blur(0px); letter-spacing: 24px; }
+}
+
+/* 去框化終端按鈕 */
+.btn-terminal {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1rem;
+    letter-spacing: 12px;
+    cursor: pointer;
+    transition: all 0.5s ease;
+    padding: 20px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5);
+}
+
+.btn-terminal:hover {
+    color: #fff;
+    text-shadow: 0 0 25px rgba(255,255,255,0.6);
+    letter-spacing: 16px;
+    transform: translateY(-3px);
+}
+
+/* 文字漂浮低語 */
+@keyframes text-float {
+    0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+    50% { transform: translate(5px, -5px); opacity: 0.6; }
+}
+
+/* 遊戲儀表板 */
+#monitor-dashboard {
+    flex-shrink: 0; /* 禁止壓縮，保護數值可見性 */
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    background: #050505;
+    padding: 1rem;
+    border: 1px solid #1a1a1a;
+    background-image: 
+        linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    position: relative;
+    overflow: visible; /* 允許數值文字稍微溢出以防切斷 */
+}
+
+.monitor-item { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; position: relative; }
+.wave-label-container { display: flex; align-items: center; gap: 0.5rem; z-index: 3; }
+.anatomical-brain, .anatomical-heart { width: clamp(30px, 6vw, 45px); height: clamp(30px, 6vw, 45px); transition: transform 0.3s; }
+.anatomical-brain:hover, .anatomical-heart:hover { transform: scale(1.1); }
+.anatomical-brain { color: var(--trust-color); filter: drop-shadow(0 0 15px var(--trust-color)) brightness(1.6); }
+.anatomical-heart { color: var(--danger-color); filter: drop-shadow(0 0 15px var(--danger-color)) brightness(1.6); }
+.vitals-label { font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: #aaa; letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 5px rgba(0,0,0,0.5); }
+.canvas-wrapper { 
+    position: relative; 
+    height: clamp(40px, 8vh, 60px); 
+    background: rgba(0,0,0,0.3); 
+    border: 1px solid #111; 
+}
+#ecg-canvas, #eeg-canvas { width: 100%; height: 100%; }
+
+.monitor-text {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.5rem;
+    font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+    font-family: monospace;
+    color: #ffffff; /* 強制白色 */
+    text-shadow: 0 0 8px rgba(0,0,0,1), 0 0 3px rgba(0,0,0,1); /* 多層陰影防止被波形擋住 */
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 5;
+}
+.monitor-text.danger { color: #ff3333; text-shadow: 0 0 10px rgba(0,0,0,1); }
+
+/* 行動裝置適應性優化 */
+@media (max-width: 600px) {
+    #monitor-dashboard {
+        flex-direction: column;
+        gap: 0.8rem;
+        padding: 0.8rem;
+    }
+    
+    .monitor-item {
+        width: 100%;
+    }
+    
+    .canvas-wrapper {
+        height: 50px;
+    }
+    
+    #scene-container {
+        max-height: 40vh; /* 手機版畫面縮小，讓出空間給對話與輸入 */
+    }
+    
+    #dialogue-box {
+        padding: 0.8rem;
+        min-height: 100px;
+    }
+    
+    #text-content {
+        line-height: 1.4;
+    }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    /* 針對橫向超矮螢幕的特殊優化 */
+    #monitor-dashboard { display: none; } /* 隱藏儀表板以確保能看到畫面與對話 */
+    #scene-container { max-height: 45vh; }
+}
+
+/* 核心圖片容器 - 強制 16:9 電影比例 */
+#scene-container {
+    width: 100%;
+    flex-grow: 1; /* 吸收剩餘空間 */
+    aspect-ratio: 16 / 9; /* 鎖定 16:9 比例 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    background: #000;
+    border: 1px solid #1a1a1a;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+    max-height: 55vh; /* 確保不遮擋下方區域 */
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+}
+
+#scene-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 讓圖片填滿容器，確保 16:9 構圖震撼力 */
+    display: block;
+    filter: contrast(1.1) grayscale(1) brightness(0.85);
+    transition: opacity 1s;
+    z-index: 1;
+}
+
+/* 監視器標示 */
+#monitor-osd-bar {
+    position: absolute; top: 0; left: 0; width: 100%; height: 30px;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 15px; z-index: 10;
+    font-family: monospace;
+}
+
+.osd-text { color: #4df163; font-size: 0.75rem; }
+#rec-indicator { color: #ff0000; font-size: 0.7rem; animation: blink 1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* 對話與輸入區 */
+#dialogue-box {
+    flex-shrink: 0; /* 防止功能區被壓縮 */
+    padding: clamp(1rem, 3vh, 1.5rem);
+    background: #080808;
+    border-top: 1px solid #151515;
+    min-height: clamp(100px, 15vh, 150px);
+    overflow-y: auto; /* 預防文字溢出 */
+}
+
+#speaker { font-size: clamp(0.7rem, 1.5vw, 0.8rem); color: #444; letter-spacing: 3px; margin-bottom: 0.5rem; }
+#text-content { font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.6; color: #999; }
+#desc-content { font-size: clamp(0.75rem, 2vw, 0.85rem); color: #555; margin-top: 0.5rem; }
+
+#input-area {
+    flex-shrink: 0;
+    margin-top: 1rem;
+    display: flex;
+    border: 1px solid #151515;
+}
+
+#suggestion-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #fff;
+    padding: clamp(10px, 2vh, 15px);
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    outline: none;
+}
+
+#submit-btn {
+    background: #111; color: #555; border: none; padding: 0 clamp(15px, 4vw, 30px);
+    cursor: pointer; transition: 0.3s;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+}
+#submit-btn:hover { background: #222; color: #fff; }
+
+#inventory-display {
+    flex-shrink: 0;
+    margin-top: 0.5rem;
+    font-size: clamp(0.7rem, 1.5vw, 0.8rem);
+    color: #444;
+}
+
+.monologue-style { font-style: italic; color: #888; }
+.vignette {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 100%);
+    pointer-events: none;
+    z-index: 5;
+}
