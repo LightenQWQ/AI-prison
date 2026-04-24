@@ -32,7 +32,8 @@ body {
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: clamp(0.5rem, 2vh, 1.5rem);
+    align-items: center; /* 強制所有子元素水平置中 */
+    padding: 0.5rem clamp(0.5rem, 2vh, 1.5rem) clamp(0.5rem, 2vh, 1.5rem) clamp(0.5rem, 2vh, 1.5rem);
     background: #000;
     border: 1px solid #1a1a1a;
     box-shadow: 0 0 100px rgba(0,0,0,1);
@@ -280,8 +281,9 @@ body {
 
 /* 核心圖片容器 - 強制 16:9 電影比例 */
 #scene-container {
-    width: 100%;
-    flex-grow: 1; /* 吸收剩餘空間 */
+    width: 85%; /* 等比例縮小寬度 */
+    margin: 0 auto 1.5rem auto; /* 靠上、置中，增加下方間距 */
+    flex-shrink: 0; /* 禁止被壓縮 */
     aspect-ratio: 16 / 9; /* 鎖定 16:9 比例 */
     display: flex;
     align-items: center;
@@ -290,9 +292,8 @@ body {
     background: #000;
     border: 1px solid #1a1a1a;
     overflow: hidden;
-    margin-bottom: 0.5rem;
-    max-height: 55vh; /* 確保不遮擋下方區域 */
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+    max-height: 50vh; /* 限制最大高度 */
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.9), 0 10px 30px rgba(0,0,0,0.5);
 }
 
 #scene-image {
@@ -320,7 +321,8 @@ body {
 
 /* 對話與輸入區 */
 #dialogue-box {
-    flex-shrink: 0; /* 防止功能區被壓縮 */
+    width: 100%; /* 確保對話框佔滿可視寬度並內容置中 */
+    flex-shrink: 0;
     padding: clamp(1rem, 3vh, 1.5rem);
     background: #080808;
     border-top: 1px solid #151515;
@@ -369,4 +371,35 @@ body {
     background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 100%);
     pointer-events: none;
     z-index: 5;
+}
+
+/* 記憶碎片 - 劇院式浮層 */
+#memory-fragment {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 50;
+    color: #fff;
+    font-family: 'EB Garamond', serif;
+    font-style: italic;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    text-shadow: 0 0 15px rgba(255,255,255,0.6), 0 0 30px rgba(0,0,0,1);
+    text-align: center;
+    width: 80%;
+    pointer-events: none;
+    opacity: 0;
+    letter-spacing: 10px;
+    transition: opacity 1.5s ease;
+}
+
+#memory-fragment.fragment-glitch {
+    animation: fragment-ink-reveal 6s ease-in-out forwards;
+}
+
+@keyframes fragment-ink-reveal {
+    0% { opacity: 0; filter: blur(15px); letter-spacing: 20px; }
+    20% { opacity: 1; filter: blur(0px); letter-spacing: 6px; }
+    80% { opacity: 1; filter: blur(0px); letter-spacing: 6px; }
+    100% { opacity: 0; filter: blur(5px); letter-spacing: 10px; }
 }
