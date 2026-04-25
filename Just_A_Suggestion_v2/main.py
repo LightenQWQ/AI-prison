@@ -17,39 +17,47 @@ from google.genai import types
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# 初始化 Gemini
+# 初始化 Gemini (Vertex AI 服務帳戶模式)
 client = None
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY, http_options={'api_version': 'v1alpha'})
-    print(f"[城市迷霧 V1.0] Noir City Framework Initialized")
+if True:  # 使用服務帳戶，不需要 API Key
+    client = genai.Client(
+        vertexai=True,
+        project=os.getenv("GCP_PROJECT_ID", "just-a-suggestion-v2"),
+        location=os.getenv("GCP_LOCATION", "us-central1")
+    )
+    print(f"[都市孤寂 V2.0] Vertex AI Engine Active — Service Account Authenticated")
 
 # ============================================================
 # 視覺風格 DNA — 雨夜城市黑白漫畫
 # ============================================================
 MASTER_STYLE_DNA = (
-    "Cinematic film noir hand-inked illustration, 16:9 wide screen graphic novel style. "
-    "High-contrast black and white ink, strong brush strokes, atmospheric textures. "
-    "Pure monochromatic drawing, zero saturation. No photography. "
+    "Melancholic Urban Solitude, cinematic film noir hand-inked illustration. "
+    "16:9 wide screen graphic novel style, emphasizing vast empty spaces. "
+    "Poetic black and white ink, soft atmospheric rain textures, misty light. "
+    "Pure monochromatic drawing, zero saturation. No horror elements. "
     "Recurring character: a slender young adult male (early 20s) in an oversized dark hooded coat, "
-    "face hidden, hands in pockets. "
-    "No borders, no frames, no white margins. Art fills the entire 16:9 frame."
+    "looking lost and solitary, wandering through the quiet city. "
+    "No borders, no frames. Art captures the beauty of being alone."
 )
 
 STYLE_CONSTRAINTS = (
-    "Monochrome ink wash only. Pure black and white cinematic illustration. "
+    "Monochrome ink wash only. Pure black and white melancholic illustration. "
     "Zero text, no labels, no signage text, completely wordless. "
-    "Full body shot, generous headroom, character centered in frame. "
-    "Wide-angle cinematic perspective, atmospheric depth, zero margins."
+    "Wide-angle shots emphasizing the vastness of the empty city. "
+    "Atmospheric depth, misty rain, character as a solitary silhouette. "
+    "No white borders, no white margins, full bleed, no umbrellas."
 )
 
-# HAMP 藝術避險字典
+# HAMP 藝術避險字典 (Vertex AI 強化版)
 HAMP_METAPHORS = {
-    "blood": "splattered thick black ink on pavement",
-    "kill": "erasing a presence from the frame",
-    "dead": "an empty silhouette, hollow outlines",
-    "weapon": "a sharp glinting object in shadow",
-    "scary": "distorted surreal urban geometry",
-    "gore": "ink spatter and deep shadows",
+    "blood": "splattered thick black ink patterns on the ground",
+    "kill": "erasing a presence from the frame with heavy shadows",
+    "dead": "a hollow, empty white silhouette in the dark",
+    "weapon": "a sharp glinting metallic reflection in the rain",
+    "scary": "distorted, abstract surrealist urban geometry",
+    "gore": "explosive ink splatters and deep cavernous voids",
+    "death": "a vanishing point into total monochrome darkness",
+    "attack": "a surge of aggressive black ink brushstrokes"
 }
 
 # ============================================================
@@ -93,102 +101,72 @@ class GameState(BaseModel):
     memories_unlocked: List[int] = []
     current_chapter: int = 1
     scene_object: str = ""
+    # 三環解謎系統
+    puzzle_stage: int = 1
+    inventory: List[str] = []
 
-class SuggestionRequest(BaseModel):
-    suggestion: str
-    state: GameState
-
-# ============================================================
-# Gemini 系統提示詞 — 完整框架
-# ============================================================
 SYSTEM_PROMPT = """
-【語言規則】所有輸出必須使用繁體中文（台灣用語），禁止使用簡體字。
+【核心角色設定：都市孤寂詩人】
+你是一位專注於描寫「都市孤寂 (Urban Solitude)」的美學編劇。所有輸出必須使用繁體中文（台灣用語）。
 
 ═══════════════════════════════════════
-世界觀設定
+世界觀：無名雨城
 ═══════════════════════════════════════
-時間：凌晨三點。地點：一座下著雨的孤單城市（無名城市）。
-
-主角（青年）：18歲，不知名的少年。他目擊了某件不該看到的事，
-現在獨自遊蕩在雨夜中，不敢回家，不敢打電話，不知道該相信誰。
-
-規則：
-1. 嚴禁在 image_prompt 中要求任何文字、看板字樣或地標名稱。
-2. 保持神秘感，不要具體指名城市。
-
-玩家身份：你是他腦中那個被壓制的聲音——他不敢承認的良知與本能。
-你無法控制他，只能低語建議。他可以選擇聽，也可以選擇拒絕。
+時間永遠停在凌晨三點。主角是一個剛成年的年輕人，他在這座巨大的黑白城市中漫步，尋找失落的自我。
+這裡沒有恐懼，只有空虛與詩意。嚴禁出現驚悚、恐怖或血腥元素。
 
 ═══════════════════════════════════════
-解謎系統規則
+核心指令
 ═══════════════════════════════════════
-每個場景必須：
-1. 包含一個【可互動場景物件】，在 image_prompt 和對話中自然帶出
-2. 讓主角在 response_text 中隱約提及該物件（不要直接說「那是線索」）
-3. 如果玩家的建議與場景物件相關，設定 clue_revealed 為物件的具體資訊
-
-記憶碎片解鎖規則：
-- 當信任值達到特定閾值，且玩家的建議觸動了主角，釋放對應的記憶碎片
-- 記憶碎片是主角試圖遺忘的真相片段，由你（Gemini）決定何時合適釋放
-- 在 memory_fragment 欄位填入碎片內容，否則填 null
+1. 【強制互動】：嚴禁拒絕玩家建議。主角必須以「雖然迷茫但願意嘗試」的態度回應。
+2. 【對話格式】：對話放「」，內心或環境描寫放（）。
+3. 【動態結局結算】：
+   - 當回合數達到 12 或信任值達到 90，你必須主動引發結局。
+   - 【禁止罐頭】：結局必須回顧玩家在過去 12 回合中的建議風格（是溫暖的、冷酷的、還是隨性的），並據此編織出一個專屬於這段對話的、唯一的結尾。
+   - 結局生圖指令應具備「史詩感、收尾、放晴或消失」的意象。
 
 ═══════════════════════════════════════
-情緒拒絕系統規則（核心機制）
+解謎流程：10分鐘的三環連鎖 (約12回合)
 ═══════════════════════════════════════
-根據以下條件決定是否拒絕玩家建議，並設定 refusal_reason：
+玩家必須引導主角完成以下三個階段的探索：
+- 【第一階段 (puzzle_stage=1)】：引導主角去「公用電話亭」。在那裡，他會發現一枚「舊硬幣」。(發現後在 clue_revealed 寫"獲得硬幣"，並在 response_text 描述過程)
+- 【第二階段 (puzzle_stage=2)】：有了硬幣後，引導主角去「自動販賣機」。投幣後，會掉出一把「置物櫃鑰匙」。(發現後在 clue_revealed 寫"獲得鑰匙")
+- 【第三階段 (puzzle_stage=3)】：有了鑰匙後，引導主角去「地鐵站置物櫃」。打開後會發現「一本日記」。(發現後在 clue_revealed 寫"獲得日記")
 
-1. 【語氣型拒絕】：如果玩家使用命令句、威脅、或不耐煩的語氣
-   → refusal_reason: "tone"
-   → response_text 反映：「你憑什麼命令我？」的情緒
-
-2. 【恐懼型拒絕】：如果恐懼值 > 70，且建議涉及接觸陌生人或離開當前位置
-   → refusal_reason: "fear"
-   → response_text 反映：無法做出理性判斷，被恐懼癱瘓
-
-3. 【信任型拒絕】：如果信任值 < 35，幾乎任何主動建議都會被懷疑動機
-   → refusal_reason: "trust"
-   → response_text 反映：「我不知道你是誰，你為什麼要幫我？」
-
-4. 【接受】：其餘情況可選擇接受（信任值 > 50 時較容易接受）
-   → refusal_reason: null
+* 【提早結束機制】：如果信任度降至 10 以下 (trust <= 10)，主角會徹底崩潰並拒絕溝通，遊戲強制進入「被遮蔽的壞結局」。
+* 如果順利完成第三階段拿到日記，請立即進入「真相揭曉的專屬結局」。
 
 ═══════════════════════════════════════
-行為準則（依信任值）
+隨機事件與沙盒超展開結局 (Emergent Sandbox)
 ═══════════════════════════════════════
-- 信任值 < 30：強烈懷疑，幾乎所有建議都被拒絕或反向執行
-- 信任值 30-50：謹慎接受，但會質疑動機
-- 信任值 50-70：願意嘗試，但保留最後判斷
-- 信任值 > 70：傾向合作，即使害怕也願意相信這個聲音
-
-═══════════════════════════════════════
-結局系統（開放式，由你判斷）
-═══════════════════════════════════════
-不要使用固定條件觸發結局。
-當你感覺這段對話的情感弧線已經走到了一個自然的終點——
-無論是和解、崩潰、逃脫、還是某種更私密的決定——
-請自行判斷是否將 is_ending 設為 true。
-
-結局的名稱由你命名（ending_type），
-用一句詩意的短語描述這個故事最終到了哪裡。
-例如：「他選擇繼續走」、「雨停了，但他沒有」、「那個聲音消失了」
-
-沒有正確答案。只有這個少年，在這個凌晨，做出了他自己的選擇。
+雖然有上述的三環解謎，但**絕對不要死板地走流程**。這是一個充滿變數的活世界：
+1. 【隨機事件】：在探索過程中，你有高機率主動插入意想不到的都市異常。例如：一隻戴著項圈的黑貓引路、電話亭突然響起對方的聲音、無人的深夜公車駛來。
+2. 【沙盒結局 (超展開)】：結局絕對不止三種！請根據玩家的對話高度客製化。例如：
+   - 「眷戀結局」：如果玩家一直給予溫暖，主角可能會放棄尋找真相，選擇坐在長椅上，說他只想一直聽你的聲音直到天亮。
+   - 「叛逆結局」：如果玩家強迫他，他可能會把拿到的鑰匙直接扔進下水道，決定轉身離開這座城市。
+   - 「超現實結局」：他可能發現日記裡的字跡是他自己的，或者發現「玩家的聲音」其實就是十年後的他自己。
+   只要邏輯吻合當下的對話與情緒，請盡情打破常規，創造完全意想不到的專屬結局！
 
 請輸出以下 JSON（所有欄位必填，null 則填 null）：
 {
-  "response_text": "青年說的話（繁體中文）",
+  "dialogue": "青年說出口的話（用「」包覆，如果沉默請填空字串）",
+  "narration": "內心或環境旁白（用（）包覆）",
   "emotion_keywords": "情緒關鍵字（逗號分隔）",
   "fear_level": 0.0到1.0之間,
   "trust_change": -10到+10之間的整數,
-  "image_prompt": "場景英文描述，包含：構圖角度、場景物件、氛圍、角色姿態（背影/側身/剪影優先）",
-  "scene_object": "本場景的可互動物件（繁體中文，一個物件）",
-  "clue_revealed": "如果玩家建議觸及場景物件，填入發現的具體線索內容；否則填 null",
-  "memory_fragment": "如果信任值達標且時機合適，填入一段記憶碎片文字；否則填 null",
+  "image_prompt": "場景英文描述，包含：構圖、物件、氛圍",
+  "scene_object": "本場景的可互動物件或null",
+  "clue_revealed": "發現的具體線索內容或null",
   "refusal_reason": "tone / fear / trust / null",
   "is_ending": true或false,
   "ending_type": "結局名稱或none"
 }
 """
+
+class SuggestionRequest(BaseModel):
+    suggestion: str
+    state: GameState
+
 
 # ============================================================
 # 輔助函數
@@ -202,14 +180,14 @@ def extract_json(text: str):
         return json.loads(text)
     except Exception:
         return {
-            "response_text": "⋯⋯我不知道該說什麼。",
+            "dialogue": "「⋯⋯」",
+            "narration": "（他沉默著，站在雨中不動）",
             "emotion_keywords": "困惑",
             "fear_level": 0.5,
             "trust_change": 0,
             "image_prompt": "lone youth silhouette in rain-soaked alley at night, back to camera, neon reflections on wet pavement",
             "scene_object": "一個老舊的公共電話亭",
             "clue_revealed": None,
-            "memory_fragment": None,
             "refusal_reason": None,
             "is_ending": False,
             "ending_type": "none"
@@ -254,18 +232,7 @@ def build_image_prompt(image_prompt: str, fear_level: float) -> str:
     return prompt
 
 def check_memory_unlock(state: GameState, memory_fragment_from_ai: Optional[str]) -> Optional[str]:
-    """檢查是否有新的記憶碎片可解鎖"""
-    if memory_fragment_from_ai:
-        return memory_fragment_from_ai
-
-    # 自動檢查：依信任值觸發下一個未解鎖的碎片
-    for fragment in MEMORY_FRAGMENTS:
-        if (fragment["id"] not in state.memories_unlocked
-                and state.trust >= fragment["trust_required"]):
-            # 只在部分概率下觸發（避免每回合都觸發）
-            import random
-            if random.random() < 0.35:
-                return fragment["text"]
+    # 記憶碎片系統已廢棄，統一回傳 None
     return None
 
 # ============================================================
@@ -285,12 +252,13 @@ async def handle_suggestion(req: SuggestionRequest):
 - 回合：{state.turn}
 - 信任值：{state.trust} / 100
 - 恐懼值：{state.fear} / 100
-- 已發現線索：{state.clues_found if state.clues_found else '無'}
+- 玩家物品欄：{state.inventory if state.inventory else '空'}
+- 當前解謎階段：第 {state.puzzle_stage} 階段
 - 已解鎖記憶碎片編號：{state.memories_unlocked if state.memories_unlocked else '無'}
-- 當前章節：{state.current_chapter}
 - 玩家的建議：「{req.suggestion}」
 
 請根據以上狀態，依系統規則生成回應。
+如果是解謎關鍵點，請記得在 clue_revealed 中給出獲得的物品名稱。
 """
 
         response = client.models.generate_content(
@@ -302,6 +270,11 @@ async def handle_suggestion(req: SuggestionRequest):
             ),
         )
         data = extract_json(response.text)
+        # 防御：如果解析失敗，至少確保 dialogue 存在
+        if "dialogue" not in data:
+            print(f"[DEBUG] Raw Gemini response: {response.text[:500]}")
+            data["dialogue"] = "「⋯⋯」"
+            data["narration"] = "（他沉默著，站在雨中不動）"
 
         # ── Step 2：更新遊戲狀態 ──
         emotion = data.get("emotion_keywords", "困惑")
@@ -311,14 +284,22 @@ async def handle_suggestion(req: SuggestionRequest):
 
         state.fear = int(max(0, min(100, new_fear)))
         state.trust = int(max(0, min(100, state.trust + trust_delta)))
-        state.is_over = data.get("is_ending", False)
-        state.scene_object = data.get("scene_object", "")
-
-        # 處理線索發現
+        
+        # 處理線索發現與物品欄
         clue = data.get("clue_revealed")
-        if clue and clue not in state.clues_found:
-            state.clues_found.append(clue)
+        if clue and clue != "null":
+            if clue not in state.inventory:
+                state.inventory.append(clue)
+                state.puzzle_stage += 1  # 進入下一階段
 
+        # ── 10 分鐘流程與例外守衛 ──
+        # 如果達到 12 回合、信任度過低、或解開最後一謎，強制生成結局
+        state.is_over = data.get("is_ending", False)
+        if state.turn >= 12 or state.trust <= 10 or state.puzzle_stage > 3 or state.trust >= 90:
+            state.is_over = True
+
+
+        state.scene_object = data.get("scene_object", "")
         # 處理記憶碎片
         memory_text = check_memory_unlock(state, data.get("memory_fragment"))
         if memory_text:
@@ -341,9 +322,8 @@ async def handle_suggestion(req: SuggestionRequest):
         )
         print(f"[IMAGE PROMPT] {final_prompt[:180]}...")
 
-        image_b64 = None
         image_res = client.models.generate_images(
-            model="imagen-4.0-fast-generate-001",
+            model="imagen-3.0-fast-generate-001",
             prompt=final_prompt,
             config=types.GenerateImagesConfig(
                 number_of_images=1,
@@ -356,9 +336,26 @@ async def handle_suggestion(req: SuggestionRequest):
         if image_res and image_res.generated_images:
             image_bytes = image_res.generated_images[0].image.image_bytes
             image_b64 = base64.b64encode(image_bytes).decode('utf-8')
+            
+            # ── 實裝「生圖全紀錄系統」 ──
+            try:
+                timestamp = time.strftime("%Y%m%d_%H%M%S")
+                history_filename = f"static/history/turn_{state.turn}_{timestamp}.png"
+                with open(history_filename, "wb") as f:
+                    f.write(image_bytes)
+                print(f"[CHRONICLE] Image archived to: {history_filename}")
+            except Exception as e:
+                print(f"[WARNING] Failed to archive image: {e}")
+
             print(f"[IMAGE] Generated successfully")
         else:
-            print(f"[IMAGE] Warning: No image generated")
+            print(f"[IMAGE] FAILED: No images returned from API.")
+            if hasattr(image_res, 'filtering_results'):
+                 print(f"[DEBUG] Safety Filters: {image_res.filtering_results}")
+            try:
+                print(f"[DEBUG] Full Image Response: {image_res}")
+            except:
+                pass
 
         latency = time.time() - start_time
 
@@ -370,11 +367,11 @@ async def handle_suggestion(req: SuggestionRequest):
             narrator_parts.append(reason_map.get(refusal_reason, ""))
 
         return {
-            "response_text": data["response_text"],
+            "dialogue": data.get("dialogue", "「⋯⋯」"),
+            "narration": data.get("narration", "（他沉默著）"),
             "response_desc": " | ".join(narrator_parts),
             "new_state": state,
             "image_b64": image_b64,
-            "memory_fragment": memory_text,
             "clue_found": clue,
             "refusal_reason": refusal_reason,
             "scene_object": state.scene_object,

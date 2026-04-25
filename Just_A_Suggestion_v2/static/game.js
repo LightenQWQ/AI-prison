@@ -304,7 +304,9 @@ function showNextIntro() {
 function updateUI(data) {
     document.getElementById('scene-image').style.opacity = "1";
     // 主角對白 → 白色對話框
-    if (data.response_text) document.getElementById('text-content').innerText = data.response_text;
+    if (data.dialogue !== undefined) {
+        document.getElementById('text-content').innerText = data.dialogue === "" ? "（保持沉默）" : data.dialogue;
+    }
 
     // 旁白區：小字灰色
     const narratorEl = document.getElementById('narrator-text');
@@ -344,11 +346,8 @@ function updateUI(data) {
 }
 
 function updateLocationDisplay(loc) {
-    const el = document.getElementById('monitor-osd-bar');
-    if (!el) return;
-    const channels = { "rainy_alley": "01", "parking_lot": "02", "convenience_store": "03", "rooftop": "04" };
-    const ch = channels[loc] || "XX";
-    el.querySelector('.osd-text').innerHTML = `<span class="osd-line">|</span> CCTV CH-${ch} | ${loc.toUpperCase().replace('_', ' ')}`;
+    // OSD 條已從 UI 移除，此函式不再執行 DOM 操作以避免報錯
+    return;
 }
 
 // 呼吸感點點循環（只在主角靜默時作用）

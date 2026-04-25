@@ -17,3 +17,8 @@ test_outputv138/
 *.png
 *.zip
 server.log
+
+config/secrets/
+*.json
+!package.json
+!package-lock.json
