@@ -34,14 +34,14 @@ MASTER_STYLE_DNA = (
     "Melancholic Urban Solitude, cinematic film noir hand-inked illustration. "
     "16:9 wide screen graphic novel style, emphasizing vast empty spaces. "
     "Poetic black and white ink, soft atmospheric rain textures, misty light. "
-    "Pure monochromatic drawing, zero saturation. No horror elements. "
+    "Pure monochromatic drawing, zero saturation, ABSOLUTELY NO COLORS. No horror elements. "
     "Recurring character: a slender young adult male (early 20s) in an oversized dark hooded coat, "
     "looking lost and solitary, wandering through the quiet city. "
     "No borders, no frames. Art captures the beauty of being alone."
 )
 
 STYLE_CONSTRAINTS = (
-    "Monochrome ink wash only. Pure black and white melancholic illustration. "
+    "Monochrome ink wash only. STRICTLY GRAYSCALE. NO COLORS. No red, no yellow, no blue. "
     "Zero text, no labels, no signage text, completely wordless. "
     "Wide-angle shots emphasizing the vastness of the empty city. "
     "Atmospheric depth, misty rain, character as a solitary silhouette. "
