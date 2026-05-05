@@ -33,6 +33,7 @@
 - 2026-04-23 : 升級「只是一個建議」至 V19.0 「極速方圖版」，解析度鎖定 512x512，整合本地 SD Forge (RTX 4060) 與 IP-Adapter 視覺特徵鎖定。
 - 2026-04-24 : 完成「Noir 內在視角 (Inner Perspective)」UI 革命，全面移除監視器元素，改為沉浸式漂浮 HUD。實裝「視覺引擎 2.0」，原生支持 16:9 電影比例並徹底消除漫畫網點 (Halftone)。
 - 2026-05-05 : 實裝「麵包屑解謎」與「100% 強制怪誕敘事」，建立完善的文件架構 (docs/ 與 CHANGELOG)，並解決生圖模型的語意滲透 (Semantic Bleed) 色彩問題。
+- 2026-05-06 : 升級至 V22.5「情緒感應視覺系統」，實裝色彩殺手協議 (Color Killer Protocol) 與分鏡解放邏輯，達成 100% 二色調藝術渲染。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
@@ -53,6 +54,9 @@
 | 2026-05-05 | web | Split UI into Dual-Track Narrative (White Dialogue / Grey Narration) | high | [VERIFIED] | - | Active | - | - |
 | 2026-05-05 | infra | Downgraded to Imagen 3.0 Fast to reduce generation latency to 5-8s | high | [VERIFIED] | - | Active | - | - |
 | 2026-05-05 | web | Implemented "STRICTLY GRAYSCALE. NO COLORS." to fix Semantic Bleed | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-06 | web | Migrated to "Artistic Brush Mode" (V22.5) using Color Killer Protocol | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-06 | web | Implemented "Emotional Style Shifting" (Noir Ink vs Manga Screen-tone) | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-06 | web | Enabled "Cinematic Framing Liberation" (AI-driven camera angles) | high | [VERIFIED] | - | Active | - | - |
 ## 🔐 Environment Variables Protocol
 - All secrets MUST live in `.env` (never hardcode in source).
 - `.env.example` is the template — it contains only keys, no real values.

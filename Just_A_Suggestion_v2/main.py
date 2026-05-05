@@ -31,21 +31,19 @@ if True:  # 使用服務帳戶，不需要 API Key
 # 視覺風格 DNA — 雨夜城市黑白漫畫
 # ============================================================
 MASTER_STYLE_DNA = (
-    "Melancholic Urban Solitude, cinematic film noir hand-inked illustration. "
-    "16:9 wide screen graphic novel style, emphasizing vast empty spaces. "
-    "Poetic black and white ink, soft atmospheric rain textures, misty light. "
-    "Pure monochromatic drawing, zero saturation, ABSOLUTELY NO COLORS. No horror elements. "
-    "Recurring character: a slender young adult male (early 20s) in an oversized dark hooded coat, "
-    "looking lost and solitary, wandering through the quiet city. "
-    "No borders, no frames. Art captures the beauty of being alone."
+    "A pure TWO-TONE BLACK AND WHITE charcoal drawing. "
+    "Strictly monochrome: Only absolute black ink and stark white paper. "
+    "NO SECONDARY COLORS. NO BLUE TINTS. NO CYAN. NO SPECTRUM. "
+    "Every light source is a flat white void, not a glowing lamp. "
+    "The image must look like it was drawn with a single black ink pen on white canvas."
 )
 
 STYLE_CONSTRAINTS = (
-    "Monochrome ink wash only. STRICTLY GRAYSCALE. NO COLORS. No red, no yellow, no blue. "
-    "Zero text, no labels, no signage text, completely wordless. "
-    "Wide-angle shots emphasizing the vastness of the empty city. "
-    "Atmospheric depth, misty rain, character as a solitary silhouette. "
-    "No white borders, no white margins, full bleed, no umbrellas."
+    "MANGA ARTSTYLE. Noir pencil hatching, heavy cross-hatching, gritty ink lines. "
+    "NO REALISTIC LIGHTING. No bloom effects, no volumetric fog. "
+    "Everything is made of ink strokes and pencil lines. Full bleed. "
+    "Strictly monochrome. No blue tints, no cyan shades. "
+    "Dynamic cinematic framing, varied camera angles from close-ups to wide shots."
 )
 
 # HAMP 藝術避險字典 (Vertex AI 強化版)
@@ -146,7 +144,9 @@ SYSTEM_PROMPT = """
 ⚠️ 【極度重要：影像安全護欄】⚠️
 雖然旁白中會有怪誕現象，但你在生成 `image_prompt` 時，**絕對嚴禁使用任何會觸發安全審查的字眼！**
 - 嚴禁：blood, gore, horror, creepy, monsters, violence, death。
-- 替代方案：在 `image_prompt` 中，請將這些異常現象轉化為「唯美、超現實、夢境般 (surreal, dreamlike, melancholic, abstract geometry, impossible architecture)」的意象。保持畫面的詩意與藝術感，確保生圖絕對安全。
+- 替代方案：在 `image_prompt` 中，請將這些異常現象轉化為「唯美、超現實、夢境般 (surreal, dreamlike, melancholic, abstract geometry, impossible architecture)」的意象。
+- **分鏡指導**：請根據劇情變換分鏡，例如物品特寫 (Close-up)、越肩視角 (Over-the-shoulder)、高處俯瞰 (Bird's eye view)、主角側面剪影 (Profile silhouette) 或極致仰角 (Extreme low angle)。
+保持畫面的詩意與藝術感，確保生圖絕對安全。
 
 請輸出以下 JSON（所有欄位必填，null 則填 null）：
 {
@@ -155,7 +155,7 @@ SYSTEM_PROMPT = """
   "emotion_keywords": "情緒關鍵字（逗號分隔）",
   "fear_level": 0.0到1.0之間,
   "trust_change": -10到+10之間的整數,
-  "image_prompt": "場景英文描述，包含：構圖、物件、氛圍",
+  "image_prompt": "場景英文描述，包含：變換分鏡（如特寫/俯瞰等）、物件、氛圍",
   "scene_object": "本場景的可互動物件或null",
   "clue_revealed": "發現的具體線索內容或null",
   "refusal_reason": "tone / fear / trust / null",
@@ -195,40 +195,56 @@ def extract_json(text: str):
         }
 
 def build_image_prompt(image_prompt: str, fear_level: float) -> str:
-    """建構最終生圖提示詞 (Young Adult & Sanitized 版)"""
+    """建構最終生圖提示詞 (Emotional Style Shifting V22.5)"""
 
-    # ── 物理清洗：確保不含觸發安全攔截的敏感詞 ──
+    # ── 物理清洗與色彩殺手 ──
     sanitized = image_prompt.lower()
-    purges = {
-        "boy": "slender figure",
-        "teenager": "young adult",
-        "fear": "mysterious atmosphere",
-        "anxious": "stillness",
-        "scary": "dramatic",
-        "eerie": "cinematic",
-        "oppressive": "somber",
-        "panic": "tense stillness",
-        "18-year-old": "young adult"
+    
+    # 物理名詞轉譯：強化藝術材料描述
+    color_killers = {
+        "light": "stark white negative space",
+        "glow": "bright white ink scratch",
+        "neon": "white paper cutout shape",
+        "reflection": "white charcoal hatching",
+        "rain": "vertical white ink scratches",
+        "mist": "empty white void",
+        "fog": "unfilled white space",
+        "pavement": "rough black ink texture"
     }
+    for word, replacement in color_killers.items():
+        sanitized = sanitized.replace(word, replacement)
+
+    # 安全清洗
+    purges = {"boy": "slender figure", "teenager": "young adult", "18-year-old": "young adult"}
     for k, v in purges.items():
         sanitized = sanitized.replace(k, v)
-
-    # HAMP 轉化
     for key, metaphor in HAMP_METAPHORS.items():
         sanitized = sanitized.replace(key, metaphor)
 
-    # ── 構圖與視角優化 (防切邊) ──
-    state_desc = ""
-    if fear_level > 0.7:
-        state_desc = "Full body shot of a slender young adult male, generous headroom, wide framing."
+    # 🟢 Step 1: 根據恐懼值自動選擇風格
+    if fear_level > 0.6:
+        # 風格二：高對比網點 (表現混亂與恐懼)
+        style_base = (
+            "Manga screen-tone style, halftone dots, sharp outlines, "
+            "vintage manga aesthetic, high contrast white glow."
+        )
     else:
-        state_desc = "Full body shot, centered, standing still, generous headroom, wide framing."
+        # 風格一：深邃墨染 (表現憂鬱與探索)
+        style_base = (
+            "Deep ink-wash noir, heavy charcoal shadows, "
+            "fine cross-hatching, melancholic atmosphere."
+        )
 
-    # ── 最終組合成 三模組結構 ──
+    # 🟢 Step 2: 構圖鎖定 (不露臉、背影、側面)
+    # 這是為了維持主角的神祕感與孤寂感
+    framing = "Extreme silhouette, back view or side view, face hidden in shadows, cinematic framing."
+
+    # 🟢 Step 3: 最終組合成 三模組結構
+    # 結合 V22.0 的色彩殺手與 V22.5 的情緒風格
     prompt = (
-        f"Panoramic 16:9 wide screen frame. {MASTER_STYLE_DNA}\n\n"
-        f"Subject: {sanitized}. {state_desc}\n\n"
-        f"{STYLE_CONSTRAINTS}"
+        f"A raw, wordless black ink illustration. {style_base}\n"
+        f"Vision: {sanitized}. {framing}\n"
+        f"DNA: {MASTER_STYLE_DNA} {STYLE_CONSTRAINTS}"
     )
     return prompt
 
