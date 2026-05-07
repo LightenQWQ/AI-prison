@@ -87,23 +87,49 @@
         <!-- 儀表板改為隱藏狀態，保留 DOM 供 JS 更新數據，但不再顯示 -->
         <header id="monitor-dashboard" style="display: none;"></header>
 
-        <div id="scene-container" style="flex: 1; border: none; margin: 0; max-height: none; background: #000;">
+        <div id="scene-container" style="flex: 1; border: none; margin: 0; max-height: none; background: #000; position: relative;">
             <!-- 移除 OSD 條 -->
             <div id="monitor-osd-bar" style="display: none;"></div>
             
-            <img id="scene-image" src="" alt="Game Scene" style="filter: contrast(1.1) brightness(0.9); object-fit: cover;">
+            <img id="scene-image" src="" alt="Game Scene" style="filter: contrast(1.1) brightness(0.9); object-fit: cover; width: 100%; height: 100%;">
             <div id="memory-fragment"></div>
             <div class="vignette" style="background: radial-gradient(ellipse, transparent 50%, rgba(0,0,0,0.7) 100%);"></div>
             <div id="noise-layer"></div>
             <div class="panel-border" style="display: none;"></div>
+
+            <!-- ⭐ 台詞疊加在圖片上中間 -->
+            <div id="dialogue-box" style="
+                position: absolute;
+                bottom: 18%;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 80%;
+                text-align: center;
+                background: linear-gradient(transparent, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.6) 70%, transparent);
+                padding: 20px 40px;
+                border-radius: 4px;
+                z-index: 10;
+            ">
+                <div id="status-indicator" style="font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.15); letter-spacing: 5px; margin-bottom: 6px;">[SYNCED]</div>
+                <div id="speaker" style="font-family: 'Courier New', monospace; color: #888; font-size: 0.7rem; letter-spacing: 6px; margin-bottom: 10px; text-transform: uppercase;">青年</div>
+                <p id="text-content" style="font-family: 'EB Garamond', serif; font-size: 1.4rem; line-height: 1.9; color: #ffffff; font-style: italic; text-shadow: 0 2px 12px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8); margin: 0;">......</p>
+            </div>
         </div>
 
-        <div id="dialogue-box" style="background: transparent; border: none; text-align: center; padding: 20px 10%; margin-bottom: 20px;">
-            <div id="status-indicator" style="font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.1); letter-spacing: 5px; margin-bottom: 10px;">[SYNCED]</div>
-            <div id="speaker" style="font-family: 'Courier New', monospace; color: #444; font-size: 0.75rem; letter-spacing: 6px; margin-bottom: 15px; text-transform: uppercase;">青年</div>
-            <p id="text-content" style="font-family: 'EB Garamond', serif; font-size: 1.35rem; line-height: 1.8; color: #ffffff; font-style: italic; text-shadow: 0 0 20px rgba(0,0,0,1);">......</p>
-        </div>
-        <p id="narrator-text" style="color: #666666; text-align: center; font-size: 0.85rem; letter-spacing: 2px; font-style: italic;"></p>
+        <!-- ⭐ 旁白固定在底部 -->
+        <p id="narrator-text" style="
+            color: #888888;
+            text-align: center;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            font-style: italic;
+            padding: 10px 10%;
+            min-height: 2.5em;
+            line-height: 1.8;
+            background: rgba(0,0,0,0.85);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin: 0;
+        "></p>
 
         <div id="input-area" style="width: 50%; max-width: 500px; margin: 0 auto 50px auto; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0;">
             <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off" style="background: transparent; border: none; color: #fff; font-family: 'Courier New', monospace; font-size: 0.9rem; padding: 10px; width: 100%; outline: none; letter-spacing: 2px;">
@@ -149,6 +175,19 @@
             }
         });
     </script>
+    <!-- 工程監控面板 (Debug Panel) -->
+    <div id="debug-toggle" onclick="toggleDebug()">⚙️ ENGINE INFO</div>
+    <div id="debug-panel">
+        <h3>ENGINE MONITOR v27.2</h3>
+        <div class="debug-item"><span>MODEL:</span> <span id="debug-model">-</span></div>
+        <div class="debug-item"><span>LATENCY:</span> <span id="debug-latency">-</span>s</div>
+        <div class="debug-item"><span>STATUS:</span> <span id="debug-status">IDLE</span></div>
+        <hr>
+        <div class="debug-item"><span>FINAL PROMPT:</span></div>
+        <div id="debug-prompt">Waiting for input...</div>
+        <div id="debug-error" style="color: #ff4444; margin-top: 10px; font-size: 10px; display: none;"></div>
+    </div>
+
     <script src="game.js"></script>
 </body>
 </html>

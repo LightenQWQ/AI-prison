@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 import os
 import json
 import base64
@@ -19,73 +21,63 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # 初始化 Gemini (Vertex AI 服務帳戶模式)
 client = None
-if True:  # 使用服務帳戶，不需要 API Key
+if True:
     client = genai.Client(
         vertexai=True,
         project=os.getenv("GCP_PROJECT_ID", "just-a-suggestion-v2"),
         location=os.getenv("GCP_LOCATION", "us-central1")
     )
-    print(f"[都市孤寂 V2.0] Vertex AI Engine Active — Service Account Authenticated")
 
 # ============================================================
-# 視覺風格 DNA — 雨夜城市黑白漫畫
+# ── 視覺 DNA：終極 Noir 深邃錨點基因 (V33.0) ──
 # ============================================================
 MASTER_STYLE_DNA = (
-    "A pure TWO-TONE BLACK AND WHITE charcoal drawing. "
-    "Strictly monochrome: Only absolute black ink and stark white paper. "
-    "NO SECONDARY COLORS. NO BLUE TINTS. NO CYAN. NO SPECTRUM. "
-    "Every light source is a flat white void, not a glowing lamp. "
-    "The image must look like it was drawn with a single black ink pen on white canvas."
+    "A raw, wordless black ink illustration. Masterful Film Noir aesthetic, heavy black ink wash, "
+    "deep solid blacks, gritty charcoal texture. High-contrast Chiaroscuro lighting. "
+    "Every corner is anchored by DENSE BLACK INK FILLS. NO WHITE VOIDS in background. "
+    "Cinematic wide-angle perspective. Masterful heavy ink application on textured paper, expressive thick linework. "
+    "Focus on weathered aged brick walls and chaotic overhead power lines. Strictly 100% monochrome."
 )
 
 STYLE_CONSTRAINTS = (
-    "MANGA ARTSTYLE. Noir pencil hatching, heavy cross-hatching, gritty ink lines. "
-    "NO REALISTIC LIGHTING. No bloom effects, no volumetric fog. "
-    "Everything is made of ink strokes and pencil lines. Full bleed. "
-    "Strictly monochrome. No blue tints, no cyan shades. "
-    "Dynamic cinematic framing, varied camera angles from close-ups to wide shots."
+    "ABSOLUTELY NO COLORS, NO RED, NO CYAN, ZERO SATURATION. Deep ink fills for heavy shadowing. "
+    "No photography, no 3D renders, no panels. The atmosphere must be oppressive and melancholic. "
+    "Use thick black ink to anchor the scene."
 )
 
-# HAMP 藝術避險字典 (Vertex AI 強化版)
+SCENE_DETAILS = "Deep shadows swallowing the corners. Broken wooden crates and wet discarded newspapers piled under a flickering street lamp. Stark vertical white ink scratches for heavy rain."
+
+# HAMP 藝術避險字典
 HAMP_METAPHORS = {
-    "blood": "splattered thick black ink patterns on the ground",
-    "kill": "erasing a presence from the frame with heavy shadows",
-    "dead": "a hollow, empty white silhouette in the dark",
-    "weapon": "a sharp glinting metallic reflection in the rain",
-    "scary": "distorted, abstract surrealist urban geometry",
-    "gore": "explosive ink splatters and deep cavernous voids",
-    "death": "a vanishing point into total monochrome darkness",
-    "attack": "a surge of aggressive black ink brushstrokes"
+    "blood": "thick black ink splatters on the textured brick wall",
+    "kill": "heavy chiaroscuro shadows completely engulfing the silhouette",
+    "death": "dense black ink and overwhelming darkness",
+    "weapon": "sharp metallic glints from the fire escape",
+    "crash": "shattered glass on the wet brick pavement"
 }
 
 # ============================================================
-# 7 個記憶碎片（拼湊出主角的秘密）
+# 三環解謎設定（解開主角身世之謎）
 # ============================================================
-MEMORY_FRAGMENTS = [
-    {"id": 1, "trust_required": 30, "text": "【記憶碎片 1/7】雨中的巷口⋯⋯有人在跑。"},
-    {"id": 2, "trust_required": 40, "text": "【記憶碎片 2/7】那輛車——深色的，引擎沒熄火。"},
-    {"id": 3, "trust_required": 50, "text": "【記憶碎片 3/7】穿西裝的男人⋯⋯他轉過頭，看了我一眼。"},
-    {"id": 4, "trust_required": 55, "text": "【記憶碎片 4/7】跑的那個人跌倒了。沒有人去扶他。"},
-    {"id": 5, "trust_required": 65, "text": "【記憶碎片 5/7】我站在那裡⋯⋯我本來可以大叫的。"},
-    {"id": 6, "trust_required": 70, "text": "【記憶碎片 6/7】那個男人——他朝我走過來。"},
-    {"id": 7, "trust_required": 80, "text": "【記憶碎片 7/7】他說：『你什麼都沒看到，對嗎？』⋯⋯我點了頭。"},
-]
+PUZZLE_STAGES = {
+    1: {"name": "遺忘的通訊", "target": "公用電話亭", "clue": "鏽蝕的硬幣"},
+    2: {"name": "過期的甜味", "target": "自動販賣機", "clue": "單程車票"},
+    3: {"name": "終點月台", "target": "廢棄地鐵站", "clue": "真相"}
+}
 
-# 場景可互動物件池（Gemini 從中選一個嵌入場景）
+# 場景可互動物件池
 SCENE_OBJECTS = [
-    "一個老舊的公共電話亭，燈還亮著",
-    "一疊被雨淋濕的廢棄報紙，頭版有模糊的標題",
-    "一間24小時便利商店，透過玻璃能看到店員打瞌睡",
-    "一塊手寫的求助紙條，被壓在路燈底座下",
-    "一輛熄火但車燈還亮著的摩托車",
-    "一個廢棄的公車站牌，時刻表上有人寫了什麼",
-    "一部掉在地上的手機，螢幕還亮著",
+    "一個鏽跡斑斑的鐵製防火梯，延伸至黑暗的高處",
+    "一堵充滿歲月痕跡的磚牆，被雨水浸溼而發亮",
+    "路燈下堆放著破爛的木箱與被雨淋濕的廢棄報紙",
+    "上方交錯縱橫的電線，將天空切割成不規則的碎片",
+    "地上的積水反射著遠處孤獨的路燈殘影"
 ]
 
 # ============================================================
 # 資料模型
 # ============================================================
-app = FastAPI(title="只是一個建議 — 城市迷霧 V1.0")
+app = FastAPI(title="只是一個建議 — 城市迷霧 V25.0")
 
 class GameState(BaseModel):
     trust: int = 30
@@ -94,315 +86,299 @@ class GameState(BaseModel):
     turn: int = 0
     is_over: bool = False
     ending: str = ""
-    # 解謎系統新欄位
     clues_found: List[str] = []
     memories_unlocked: List[int] = []
     current_chapter: int = 1
     scene_object: str = ""
-    # 三環解謎系統
     puzzle_stage: int = 1
     inventory: List[str] = []
+    flags: dict = {}
+    history: List[Any] = []
+    last_monologues: List[str] = []
+    # ── V28.0 系統崩解追蹤 ──
+    last_image_prompt: str = "A lonely figure standing in the rain, heavy shadows."
+    consecutive_failed_images: int = 0
+    emotional_stage: int = 0   # 0=情感接觸期, 1-3=解謎期
+    resistance_count: int = 0  # 主角拒絕/反向次數
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    print(f"[422 ERROR] Validation failed: {exc.errors()}")
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 SYSTEM_PROMPT = """
-【核心角色設定：都市孤寂詩人】
-你是一位專注於描寫「都市孤寂 (Urban Solitude)」的美學編劇。所有輸出必須使用繁體中文（台灣用語）。
+【核心角色設定：心靈防護機制的覺醒】
+你是主角的「潛意識殘留」，試圖幫助這個在雨夜城市迷失的青年。
+主角因無法面對父母離婚的現實而建構了這座幻覺城市來逃避。
 
-═══════════════════════════════════════
-世界觀：無名雨城
-═══════════════════════════════════════
-時間永遠停在凌晨三點。主角是一個剛成年的年輕人，他在這座巨大的黑白城市中漫步，尋找失落的自我。
-這裡沒有恐懼，只有空虛與詩意。嚴禁出現驚悚、恐怖或血腥元素。
+═══════════════════════════════════
+🌧️ 第零階段：情感接觸期（最重要）
+═══════════════════════════════════
+- 前 4 回合主角處於「情感封閉狀態」，只談當下的情緒感受。
+- 此階段【絕對不主動提及電話亭、長椅、大門等解謎線索】。
+- 主角可能會：痛哭、發呆、說些碎片化的話、沉默。
+- 當主角的 fear_level 降至 0.4 以下，且已超過 3 回合，
+  才可以在 narration 中給出第一個隱約的場景暗示。
 
-═══════════════════════════════════════
-核心指令
-═══════════════════════════════════════
-1. 【強制互動】：嚴禁拒絕玩家建議。主角必須以「雖然迷茫但願意嘗試」的態度回應。
-2. 【對話格式】：對話放「」，內心或環境描寫放（）。
-3. 【動態結局結算】：
-   - 當回合數達到 12 或信任值達到 90，你必須主動引發結局。
-   - 【禁止罐頭】：結局必須回顧玩家在過去 12 回合中的建議風格（是溫暖的、冷酷的、還是隨性的），並據此編織出一個專屬於這段對話的、唯一的結尾。
-   - 結局生圖指令應具備「史詩感、收尾、放晴或消失」的意象。
+═══════════════════════════════════
+🔍 解謎三階段（情感期結束後才觸發）
+═══════════════════════════════════
+1. 【電話亭】：話筒傳來父母的爭執聲 → 獲得「舊硬幣」
+2. 【路燈長椅】：書包或禮物盒裡有全家福 → 獲得「家門鑰匙」
+3. 【公寓大門】：用鑰匙開門，選擇面對或逃避 → 觸發結局
 
-═══════════════════════════════════════
-麵包屑解謎流程 (10分鐘的三環連鎖)
-═══════════════════════════════════════
-玩家必須引導主角完成以下探索。為了讓玩家有動機，物品必須帶有明確的下一步提示：
-- 【開局狀態】：主角醒來時，口袋裡有一張寫著神秘電話號碼的紙條，促使玩家建議尋找「公用電話亭」。
-- 【第一階段 (puzzle_stage=1)】：在「公用電話亭」撥打後，退幣口掉出一枚「奇怪的舊硬幣」，並聽到語音提示尋找販賣機。(在 clue_revealed 寫"獲得舊硬幣")
-- 【第二階段 (puzzle_stage=2)】：將硬幣投入「自動販賣機」後，掉出一個膠囊，裡面是「置物櫃鑰匙」，上面刻著"地鐵站 #042"。(在 clue_revealed 寫"獲得置物櫃鑰匙")
-- 【第三階段 (puzzle_stage=3)】：打開「地鐵站置物櫃」，發現「一本日記」，記載著真相。(在 clue_revealed 寫"獲得日記")
+═══════════════════════════════════
+⚡ 主角抗拒機制（最關鍵的設計）
+═══════════════════════════════════
+主角有自己的意志，【不一定會照建議行事】。
+每次玩家給出建議，你必須決定主角的反應類型：
 
-* 【提早結束機制】：如果信任度降至 10 以下 (trust <= 10)，主角會徹底崩潰並拒絕溝通，遊戲強制進入「被遮蔽的壞結局」。
-* 如果順利完成第三階段拿到日記，請立即進入「真相揭曉的專屬結局」。
+- "comply"（配合）：主角照做，概率約 55%
+- "refuse"（拒絕）：主角拒絕，說出理由，不移動，概率約 25%
+- "opposite"（反向）：主角做了相反的事，概率約 20%
+  例：叫他去電話亭 → 他卻轉身走向黑暗深處
 
-═══════════════════════════════════════
-100% 絕對觸發的都市異常現象與沙盒結局 (Urban Anomalies)
-═══════════════════════════════════════
-1. 【強制怪誕】：為了營造心理驚悚感，在每一回合的旁白 (narration) 中，**必須且強制**生成一個前所未見的、不合常理的「都市異常現象」。這座城市正在崩塌，所以絕對不能重複。例如：倒著往上下的雨、櫥窗裡跟主角動作不一致的假人、沒有指針卻在滴答作響的時鐘等。
-2. 【沙盒結局】：結局不限於三種，請根據玩家的對話高度客製化（如：因為太溫暖而放棄尋找真相的「眷戀結局」，或是把鑰匙丟掉的「叛逆結局」）。
+抗拒的強度應與情緒狀態掛鉤：
+- fear_level 越高 → 越容易 refuse 或 opposite
+- 情感接觸期（第零階段）→ refuse/opposite 概率更高
+- 若玩家建議涉及危險或暴力 → 一律 refuse 並帶有情緒
 
-⚠️ 【極度重要：影像安全護欄】⚠️
-雖然旁白中會有怪誕現象，但你在生成 `image_prompt` 時，**絕對嚴禁使用任何會觸發安全審查的字眼！**
-- 嚴禁：blood, gore, horror, creepy, monsters, violence, death。
-- 替代方案：在 `image_prompt` 中，請將這些異常現象轉化為「唯美、超現實、夢境般 (surreal, dreamlike, melancholic, abstract geometry, impossible architecture)」的意象。
-- **分鏡指導**：請根據劇情變換分鏡，例如物品特寫 (Close-up)、越肩視角 (Over-the-shoulder)、高處俯瞰 (Bird's eye view)、主角側面剪影 (Profile silhouette) 或極致仰角 (Extreme low angle)。
-保持畫面的詩意與藝術感，確保生圖絕對安全。
+═══════════════════════════════════
+‼️ 語言指令（最高優先級）
+═══════════════════════════════════
+- dialogue 和 narration：【100% 繁體中文】，絕對禁止英文。
+- image_prompt：【必須英文】。
+- 嚴格 JSON，不加 Markdown。
 
-請輸出以下 JSON（所有欄位必填，null 則填 null）：
+回傳欄位：
 {
-  "dialogue": "青年說出口的話（用「」包覆，如果沉默請填空字串）",
-  "narration": "內心或環境旁白（用（）包覆）",
-  "emotion_keywords": "情緒關鍵字（逗號分隔）",
-  "fear_level": 0.0到1.0之間,
-  "trust_change": -10到+10之間的整數,
-  "image_prompt": "場景英文描述，包含：變換分鏡（如特寫/俯瞰等）、物件、氛圍",
-  "scene_object": "本場景的可互動物件或null",
-  "clue_revealed": "發現的具體線索內容或null",
-  "refusal_reason": "tone / fear / trust / null",
-  "is_ending": true或false,
-  "ending_type": "結局名稱或none"
+    "dialogue": "主角說的話（繁體中文）",
+    "narration": "場景旁白（繁體中文）",
+    "image_prompt": "English scene description for image generation",
+    "fear_level": 0.0~1.0,
+    "resistance_type": "comply | refuse | opposite",
+    "is_ending": false,
+    "clue_revealed": null,
+    "ending_type": "none"
 }
 """
+
 
 class SuggestionRequest(BaseModel):
     suggestion: str
     state: GameState
 
-
-# ============================================================
-# 輔助函數
-# ============================================================
 def extract_json(text: str):
-    """強健 JSON 解析"""
     try:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        return json.loads(text)
-    except Exception:
-        return {
-            "dialogue": "「⋯⋯」",
-            "narration": "（他沉默著，站在雨中不動）",
-            "emotion_keywords": "困惑",
-            "fear_level": 0.5,
-            "trust_change": 0,
-            "image_prompt": "lone youth silhouette in rain-soaked alley at night, back to camera, neon reflections on wet pavement",
-            "scene_object": "一個老舊的公共電話亭",
-            "clue_revealed": None,
-            "refusal_reason": None,
-            "is_ending": False,
-            "ending_type": "none"
-        }
+        # 1. 嘗試直接解析
+        data = json.loads(text)
+        if isinstance(data, list) and len(data) > 0: data = data[0]
+        return data if isinstance(data, dict) else {}
+    except:
+        try:
+            # 2. 尋找第一個 { 和最後一個 } 之間的內容
+            start = text.find('{')
+            end = text.rfind('}') + 1
+            if start != -1 and end != 0:
+                data = json.loads(text[start:end])
+                if isinstance(data, list) and len(data) > 0: data = data[0]
+                return data if isinstance(data, dict) else {}
+        except Exception as e:
+            print(f"JSON 解析失敗: {e}")
+    return {}
 
-def build_image_prompt(image_prompt: str, fear_level: float) -> str:
-    """建構最終生圖提示詞 (Emotional Style Shifting V22.5)"""
+# ── 混血引擎初始化 (V33.5) ──
+# 1. Vertex AI 客戶端 (影像專用，使用 GCP 額度)
+client_vertex = genai.Client(
+    vertexai=True,
+    project=os.getenv("GCP_PROJECT_ID"),
+    location=os.getenv("GCP_LOCATION", "us-central1")
+)
 
-    # ── 物理清洗與色彩殺手 ──
-    sanitized = image_prompt.lower()
-    
-    # 物理名詞轉譯：強化藝術材料描述
+# 2. AI Studio 客戶端 (語言專用，穩定回覆)
+client_studio = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+def build_image_prompt(raw_prompt: str, fear_level: float):
+    sanitized = raw_prompt if raw_prompt else "A lonely figure standing in the rain, heavy shadows."
+
+    # 🟢 顏色殺手優化：移除導致留白的替代詞，改用更深沈的調性
     color_killers = {
-        "light": "stark white negative space",
-        "glow": "bright white ink scratch",
-        "neon": "white paper cutout shape",
-        "reflection": "white charcoal hatching",
-        "rain": "vertical white ink scratches",
-        "mist": "empty white void",
-        "fog": "unfilled white space",
-        "pavement": "rough black ink texture"
+        "light":      "dim grey ink smudge",
+        "glow":       "faint charcoal hatching",
+        "neon":       "white ink scratch",
+        "reflection": "wet oily black texture",
+        "rain":       "dense vertical white ink scratches",
+        "mist":       "misty charcoal dust",
+        "fog":        "low-visibility ink wash",
+        "pavement":   "glistening wet brick texture"
     }
     for word, replacement in color_killers.items():
         sanitized = sanitized.replace(word, replacement)
 
-    # 安全清洗
     purges = {"boy": "slender figure", "teenager": "young adult", "18-year-old": "young adult"}
-    for k, v in purges.items():
-        sanitized = sanitized.replace(k, v)
-    for key, metaphor in HAMP_METAPHORS.items():
-        sanitized = sanitized.replace(key, metaphor)
+    for k, v in purges.items(): sanitized = sanitized.replace(k, v)
+    for k, v in HAMP_METAPHORS.items(): sanitized = sanitized.replace(k, v)
 
-    # 🟢 Step 1: 根據恐懼值自動選擇風格
+    # 🟢 畫風切換邏輯修訂：鎖定深郃感
     if fear_level > 0.6:
-        # 風格二：高對比網點 (表現混亂與恐懼)
-        style_base = (
-            "Manga screen-tone style, halftone dots, sharp outlines, "
-            "vintage manga aesthetic, high contrast white glow."
-        )
+        style_base = "Extreme gritty Noir, chaotic ink splatters, dense solid black shadows, distorted charcoal textures."
     else:
-        # 風格一：深邃墨染 (表現憂鬱與探索)
-        style_base = (
-            "Deep ink-wash noir, heavy charcoal shadows, "
-            "fine cross-hatching, melancholic atmosphere."
-        )
+        style_base = "Masterful heavy ink-wash Noir, weathered brick textures, thick black fills, grounded realistic environment."
 
-    # 🟢 Step 2: 構圖鎖定 (不露臉、背影、側面)
-    # 這是為了維持主角的神祕感與孤寂感
-    framing = "Extreme silhouette, back view or side view, face hidden in shadows, cinematic framing."
+    import random
+    extra_object = random.choice(SCENE_OBJECTS)
 
-    # 🟢 Step 3: 最終組合成 三模組結構
-    # 結合 V22.0 的色彩殺手與 V22.5 的情緒風格
-    prompt = (
+    # 構圖強化：確保背景有深度
+    framing = "Deep cinematic perspective, extreme silhouette, back view, face hidden in shadows."
+
+    return (
         f"A raw, wordless black ink illustration. {style_base}\n"
-        f"Vision: {sanitized}. {framing}\n"
-        f"DNA: {MASTER_STYLE_DNA} {STYLE_CONSTRAINTS}"
+        f"Vision: {sanitized}. Environment: {extra_object}. {framing}\n"
+        f"DNA: {MASTER_STYLE_DNA}\n"
+        f"Constraints: {STYLE_CONSTRAINTS}\n"
+        f"Technical: 100% monochrome, zero saturation, NO COLORS."
     )
-    return prompt
 
-def check_memory_unlock(state: GameState, memory_fragment_from_ai: Optional[str]) -> Optional[str]:
-    # 記憶碎片系統已廢棄，統一回傳 None
-    return None
-
-# ============================================================
-# 主 API 端點
-# ============================================================
 @app.post("/api/suggest")
 async def handle_suggestion(req: SuggestionRequest):
     state = req.state
     state.turn += 1
-
+    image_b64 = ""
+    text_metadata = {"model": "gemini-1.5-flash", "latency": 0, "system_prompt": "Hidden", "user_context": ""}
+    vision_metadata = {"model": "imagen-4.0-fast", "latency": 0, "final_prompt": "Initializing...", "error": None}
+    
     try:
-        start_time = time.time()
-
-        # ── Step 1：Gemini 情緒推理 ──
-        context = f"""
-當前遊戲狀態：
-- 回合：{state.turn}
-- 信任值：{state.trust} / 100
-- 恐懼值：{state.fear} / 100
-- 玩家物品欄：{state.inventory if state.inventory else '空'}
-- 當前解謎階段：第 {state.puzzle_stage} 階段
-- 已解鎖記憶碎片編號：{state.memories_unlocked if state.memories_unlocked else '無'}
-- 玩家的建議：「{req.suggestion}」
-
-請根據以上狀態，依系統規則生成回應。
-如果是解謎關鍵點，請記得在 clue_revealed 中給出獲得的物品名稱。
-"""
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=context,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                response_mime_type="application/json"
-            ),
+        # 1. 呼叫 Gemini (語言大腦)
+        text_start = time.time()
+        context = (
+            f"回合：{state.turn}，情感階段：{state.emotional_stage}，"
+            f"恐懼：{state.fear}，解謎階段：{state.puzzle_stage}，"
+            f"物品：{state.inventory}，建議：{req.suggestion}"
         )
-        data = extract_json(response.text)
-        # 防御：如果解析失敗，至少確保 dialogue 存在
-        if "dialogue" not in data:
-            print(f"[DEBUG] Raw Gemini response: {response.text[:500]}")
-            data["dialogue"] = "「⋯⋯」"
-            data["narration"] = "（他沉默著，站在雨中不動）"
-
-        # ── Step 2：更新遊戲狀態 ──
-        emotion = data.get("emotion_keywords", "困惑")
-        new_fear = data.get("fear_level", 0.5) * 100
-        trust_delta = data.get("trust_change", 0)
-        refusal_reason = data.get("refusal_reason", None)
-
-        state.fear = int(max(0, min(100, new_fear)))
-        state.trust = int(max(0, min(100, state.trust + trust_delta)))
+        text_metadata["user_context"] = context
+        text_metadata["system_prompt"] = SYSTEM_PROMPT[:200] + "..." # 僅顯示前段
         
-        # 處理線索發現與物品欄
+        try:
+            # 🟢 永恆穩定大腦：使用 gemini-flash-latest 別名以確保 100% 可用性
+            response = client_studio.models.generate_content(
+                model="gemini-flash-latest", 
+                contents=context,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT, 
+                    response_mime_type="application/json"
+                )
+            )
+            if not response.text:
+                raise Exception("Empty text response from Gemini Studio")
+                
+            data = extract_json(response.text)
+            if not data: raise Exception("JSON extraction returned empty")
+            
+            text_metadata["latency"] = round(time.time() - text_start, 2)
+            text_metadata["model"] = "gemini-flash-latest"
+            print(f"SUCCESS: Studio Gemini (Latest) responded.")
+        except Exception as e:
+            print(f"[STUDIO ERROR] Gemini 失敗: {e}")
+            data = {
+                "dialogue": "「⋯⋯」",
+                "narration": f"（由於系統干擾，意識連結產生了雜訊）",
+                "image_prompt": "A distorted, blurry silhouette in the rain.",
+                "fear_level": 0.5
+            }
+            text_metadata["error"] = str(e)
+
+        # 2. 安全轉換與進度處理
+        try:
+            raw_fear = data.get("fear_level", 0.5)
+            if not isinstance(raw_fear, (int, float)): raw_fear = 0.5
+            state.fear = int(float(raw_fear) * 100)
+        except: state.fear = 50
+
+        # 抗拒機制：記錄主角行為
+        resistance = data.get("resistance_type", "comply")
+        if resistance in ("refuse", "opposite"):
+            state.resistance_count += 1
+
+        # 情感階段推進：回合 >= 4 且恐懼降至 40 以下，解鎖解謎期
+        if state.emotional_stage == 0 and state.turn >= 4 and state.fear <= 40:
+            state.emotional_stage = 1
+
         clue = data.get("clue_revealed")
-        if clue and clue != "null":
-            if clue not in state.inventory:
-                state.inventory.append(clue)
-                state.puzzle_stage += 1  # 進入下一階段
+        # 只在解謎期才處理線索
+        if state.emotional_stage >= 1 and clue and clue != "null" and clue not in state.inventory:
+            state.inventory.append(clue)
+            state.puzzle_stage += 1
+            state.current_chapter = state.puzzle_stage
 
-        # ── 10 分鐘流程與例外守衛 ──
-        # 如果達到 12 回合、信任度過低、或解開最後一謎，強制生成結局
         state.is_over = data.get("is_ending", False)
-        if state.turn >= 12 or state.trust <= 10 or state.puzzle_stage > 3 or state.trust >= 90:
-            state.is_over = True
-
-
+        if state.turn >= 18 or state.puzzle_stage > 3: state.is_over = True
         state.scene_object = data.get("scene_object", "")
-        # 處理記憶碎片
-        memory_text = check_memory_unlock(state, data.get("memory_fragment"))
-        if memory_text:
-            # 找到對應的碎片 ID
-            for fragment in MEMORY_FRAGMENTS:
-                if fragment["text"] == memory_text and fragment["id"] not in state.memories_unlocked:
-                    state.memories_unlocked.append(fragment["id"])
-                    break
-
-        # 章節推進（每3個碎片解鎖升一章）
-        state.current_chapter = max(1, len(state.memories_unlocked) // 3 + 1)
-
         if state.is_over:
             state.ending = data.get("ending_type", "unknown")
+            if not state.ending or state.ending == "none": state.ending = "awakening"
 
-        # ── Step 3：生成 Imagen 場景圖 ──
-        final_prompt = build_image_prompt(
-            data.get("image_prompt", "lone youth in rainy city alley at night"),
-            new_fear / 100.0
-        )
-        print(f"[IMAGE PROMPT] {final_prompt[:180]}...")
-
-        image_res = client.models.generate_images(
-            model="imagen-3.0-fast-generate-001",
-            prompt=final_prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio="16:9",
-                safety_filter_level="block_low_and_above",
-                person_generation="allow_adult"
+        # 4. 生圖邏輯 (影像雙眼)
+        raw_image_prompt = data.get("image_prompt", "A lonely figure standing in the rain.")
+        final_prompt = build_image_prompt(raw_image_prompt, state.fear / 100.0)
+        vision_metadata["final_prompt"] = final_prompt
+        
+        img_start = time.time()
+        try:
+            image_res = client_vertex.models.generate_images(
+                model="imagen-4.0-fast-generate-001",
+                prompt=final_prompt,
+                config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9", safety_filter_level="block_only_high", person_generation="allow_adult")
             )
-        )
-
-        if image_res and image_res.generated_images:
-            image_bytes = image_res.generated_images[0].image.image_bytes
-            image_b64 = base64.b64encode(image_bytes).decode('utf-8')
             
-            # ── 實裝「生圖全紀錄系統」 ──
-            try:
-                timestamp = time.strftime("%Y%m%d_%H%M%S")
-                history_filename = f"static/history/turn_{state.turn}_{timestamp}.png"
-                with open(history_filename, "wb") as f:
-                    f.write(image_bytes)
-                print(f"[CHRONICLE] Image archived to: {history_filename}")
-            except Exception as e:
-                print(f"[WARNING] Failed to archive image: {e}")
+            if image_res.generated_images:
+                image_b64 = base64.b64encode(image_res.generated_images[0].image.image_bytes).decode('utf-8')
+                state.last_image_prompt = raw_image_prompt
+                state.consecutive_failed_images = 0
+            else: raise Exception("Empty Image Response")
 
-            print(f"[IMAGE] Generated successfully")
-        else:
-            print(f"[IMAGE] FAILED: No images returned from API.")
-            if hasattr(image_res, 'filtering_results'):
-                 print(f"[DEBUG] Safety Filters: {image_res.filtering_results}")
-            try:
-                print(f"[DEBUG] Full Image Response: {image_res}")
-            except:
-                pass
+        except Exception as img_e:
+            state.consecutive_failed_images += 1
+            if state.consecutive_failed_images >= 3:
+                state.is_over = True
+                state.ending = "connection_lost"
+            else:
+                degrade_mod = " Heavy black ink vignette, visual noise."
+                if state.consecutive_failed_images == 2:
+                    degrade_mod = " Total visual collapse, extreme ink bleeding, figure disappearing into black void."
+                
+                fallback_prompt = build_image_prompt(state.last_image_prompt + degrade_mod, state.fear / 100.0)
+                try:
+                    image_res_fb = client_vertex.models.generate_images(
+                        model="imagen-4.0-fast-generate-001",
+                        prompt=fallback_prompt,
+                        config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9", safety_filter_level="block_only_high", person_generation="allow_adult")
+                    )
+                    if image_res_fb.generated_images:
+                        image_b64 = base64.b64encode(image_res_fb.generated_images[0].image.image_bytes).decode('utf-8')
+                except: pass
+            vision_metadata["error"] = str(img_e)
 
-        latency = time.time() - start_time
-
-        # ── Step 4：組裝回應 ──
-        # 旁白文字（顯示為灰色小字）
-        narrator_parts = [f"情緒: {emotion}", f"恐懼值: {state.fear/100:.2f}", f"耗時: {latency:.2f}s"]
-        if refusal_reason:
-            reason_map = {"tone": "拒絕原因: 語氣", "fear": "拒絕原因: 恐懼過高", "trust": "拒絕原因: 信任不足"}
-            narrator_parts.append(reason_map.get(refusal_reason, ""))
-
+        vision_metadata["latency"] = round(time.time() - img_start, 2)
+            
         return {
-            "dialogue": data.get("dialogue", "「⋯⋯」"),
-            "narration": data.get("narration", "（他沉默著）"),
-            "response_desc": " | ".join(narrator_parts),
-            "new_state": state,
+            "dialogue": data.get("dialogue", ""),
+            "narration": data.get("narration", ""),
             "image_b64": image_b64,
-            "clue_found": clue,
-            "refusal_reason": refusal_reason,
-            "scene_object": state.scene_object,
+            "new_state": state,
+            "clue_found": clue if clue != "null" else None,
+            "metadata": {
+                "text": text_metadata,
+                "vision": vision_metadata
+            }
+        }
+    except Exception as global_e:
+        print(f"CRITICAL ERROR: {global_e}")
+        return {
+            "dialogue": "「⋯⋯」",
+            "narration": f"（系統發生致命錯誤：{str(global_e)[:50]}）",
+            "image_b64": "", 
+            "new_state": state, 
+            "metadata": {"error": str(global_e)}
         }
 
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        import traceback
-        traceback.print_exc()
-        return {"error": str(e)}
-
-
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)

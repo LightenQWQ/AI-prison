@@ -1,12 +1,18 @@
 let gameState = {
     trust: 30,
-    fear: 50,
-    inventory: [],
-    flags: {},
-    history: [],
+    fear: 40,
+    location: "rainy_alley",
     turn: 0,
     is_over: false,
     ending: "",
+    clues_found: [],
+    memories_unlocked: [],
+    current_chapter: 1,
+    scene_object: "",
+    puzzle_stage: 1,
+    inventory: [],
+    flags: {},
+    history: [],
     last_monologues: []
 };
 
@@ -198,9 +204,9 @@ const dreamSequence = [
 ];
 
 const introSequence = [
-    { text: "....", desc: "系統初始化：意識鏈接完成。", img: "assets/intro_start.png" },
-    { text: "....", desc: "監視畫面：凌晨三點的街頭。雨勢未歇，他在陰影中顫抖。", img: "assets/intro_start.png" },
-    { text: "....", desc: "你是那個他不願面對的直覺。試著開口，給他第一個建議。", img: "assets/intro_start.png" }
+    { text: "....", desc: "心靈防火牆滲透中。意識鏈接完成。", img: "assets/intro_start.png" },
+    { text: "....", desc: "他在這座無名雨城中徘徊。這不是真實的世界，而是他為了躲避遺棄而創造的幻覺。", img: "assets/intro_start.png" },
+    { text: "....", desc: "你是他殘存的直覺。試著開導他，帶他走出這場名為逃避的雨。", img: "assets/intro_start.png" }
 ];
 
 let introIndex = 0;
@@ -293,8 +299,8 @@ function showNextIntro() {
         document.getElementById('scene-image').style.opacity = '0';
         setTimeout(() => { document.getElementById('scene-image').style.opacity = '1'; }, 100);
         updateUI({
-            response_text: item.text,
-            response_desc: item.desc,
+            dialogue: item.text,       // ✅ 修正：使用 updateUI 讀得到的 key
+            narration: item.desc,      // ✅ 修正：使用 updateUI 讀得到的 key
             image_url: item.img || ""
         });
         introIndex++;
@@ -302,16 +308,18 @@ function showNextIntro() {
 }
 
 function updateUI(data) {
-    document.getElementById('scene-image').style.opacity = "1";
+    const sceneImg = document.getElementById('scene-image');
+    sceneImg.style.opacity = "1"; // 強制恢復透明度，避免卡在 0.5
     // 主角對白 → 白色對話框
     if (data.dialogue !== undefined) {
-        document.getElementById('text-content').innerText = data.dialogue === "" ? "（保持沉默）" : data.dialogue;
+        // 若 Gemini 成功回傳但 dialogue 為空字串，顯示省略號而非「保持沉默」
+        document.getElementById('text-content').innerText = data.dialogue || '......';
     }
 
     // 旁白區：小字灰色
     const narratorEl = document.getElementById('narrator-text');
     let narratorParts = [];
-    if (data.response_desc) narratorParts.push(data.response_desc);
+    if (data.narration) narratorParts.push(data.narration);
     if (data.scene_object) narratorParts.push(`【場景物件】${data.scene_object}`);
     narratorEl.innerText = narratorParts.join('  ｜  ');
 
@@ -323,6 +331,10 @@ function updateUI(data) {
     // 線索發現：在旁白區展示
     if (data.clue_found) {
         narratorEl.innerText += `  │  🔍 線索：${data.clue_found}`;
+    }
+
+    if (data.metadata) {
+        updateDebugInfo(data.metadata);
     }
 
     if (data.image_b64) {
@@ -355,8 +367,9 @@ let globalDotCount = 1;
 setInterval(() => {
     const textEl = document.getElementById('text-content');
     if (!textEl) return;
-    if (/^\.*$/.test(textEl.innerText)) {
-        globalDotCount = (globalDotCount % 5) + 1;
+    // 只對「純點號」字串作動畫，避免誤觸中文句點
+    if (/^\.{1,6}$/.test(textEl.innerText)) {
+        globalDotCount = (globalDotCount % 6) + 1;
         textEl.innerText = ".".repeat(globalDotCount);
     }
 }, 600);
@@ -411,14 +424,46 @@ const DEFAULT_MONOLOGUES = [
 
 // 等待生圖期間的旁白池（每 5 秒輪換）
 const WAITING_NARRATIONS = [
-    "雨水在柏油路面上泛起層層漣漪，霓虹燈的倒影在積水中破碎…",
-    "遠處傳來車胎劃過濕滑路面的刺耳聲音，隨即歸於死寂。",
-    "便利商店的自動門發出輕微的機械聲，店員的視線似乎掃過這裡…",
-    "雨滴敲擊著鐵皮屋頂，節奏沉悶而壓抑。",
-    "黑暗的巷弄深處，有什麼東西在注視著這一切。",
-    "解析當前情緒波動，雨夜的冷風正透進他的衣領…",
-    "計算環境變量中，這座城市正在慢慢吞噬他…",
+    "（他在雨中低頭，試著推開那些沉重的雜音⋯⋯）",
+    "（這座城市正在微微顫抖，幻覺的邊緣開始剝落⋯⋯）",
+    "（他聽見了，那是他不願回想的爭吵聲⋯⋯）",
+    "（你在他的意識邊緣徘徊，試著點亮一盞燈⋯⋯）",
+    "（雨滴停在半空，時間在這裡失去了意義⋯⋯）",
+    "（真相就在那道門後，但他還沒有準備好⋯⋯）"
 ];
+
+function toggleDebug() {
+    const panel = document.getElementById('debug-panel');
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+}
+
+function updateDebugInfo(metadata) {
+    if (!metadata) return;
+    const t = metadata.text || {};
+    const v = metadata.vision || metadata; // 向後相容舊格式
+
+    // 填入 BRAIN (Gemini) 欄位
+    const brainInfo = `[BRAIN] ${t.model || 'gemini-flash-latest'} | ${t.latency || 0}s`;
+    // 填入 VISION (Imagen) 欄位
+    const visionModel = v.model || 'imagen-4.0-fast';
+    const visionLatency = v.latency || 0;
+    const finalPrompt = v.final_prompt || v.prompt || 'No prompt provided.';
+    const hasError = v.error || t.error;
+
+    document.getElementById('debug-model').innerText = `${visionModel} | ${brainInfo}`;
+    document.getElementById('debug-latency').innerText = `Vision:${visionLatency}s | Brain:${t.latency||0}s`;
+    document.getElementById('debug-prompt').innerText = finalPrompt;
+    document.getElementById('debug-status').innerText = hasError ? 'FAILED' : 'DONE';
+    document.getElementById('debug-status').style.color = hasError ? '#ff4444' : '#00ff00';
+
+    const errorEl = document.getElementById('debug-error');
+    if (hasError) {
+        errorEl.innerText = 'ERROR: ' + (v.error || t.error);
+        errorEl.style.display = 'block';
+    } else {
+        errorEl.style.display = 'none';
+    }
+}
 
 async function sendSuggestion() {
     const input = document.getElementById('suggestion-input');
@@ -428,6 +473,9 @@ async function sendSuggestion() {
     input.value = "";
     document.getElementById('submit-btn').disabled = true;
     document.getElementById('scene-image').style.opacity = "0.5";
+    
+    document.getElementById('debug-status').innerText = "GENERATING...";
+    document.getElementById('debug-status').style.color = "#ffff00";
     
     const textContent = document.getElementById('text-content');
     const narratorEl = document.getElementById('narrator-text');
@@ -459,16 +507,28 @@ async function sendSuggestion() {
         clearInterval(narratorInterval);
         
         if (data.error) {
-            alert("Error: " + data.error);
-            narratorEl.innerText = '';
+            console.error("API Error:", data.error);
+            narratorEl.innerText = `（系統訊號異常：${data.error}）`;
+            document.getElementById('submit-btn').disabled = false; // ✅ 修正：錯誤時重新啟用按鈕
         } else {
-            gameState.last_monologues = data.monologues || DEFAULT_MONOLOGUES;
             updateUI(data);
             
-            if (data.new_state.is_over) {
-                soundManager.playBGM(data.new_state.suspicion >= 80 ? 'ending_bad' : 'ending_good');
+            // ✅ 修正：加入 null 安全檢查
+            if (data.new_state && data.new_state.is_over) {
+                const endingType = data.new_state.ending || "awakening";
+                let endingTitle = "【覺醒：面對現實】";
+                if (endingType === "connection_lost") {
+                    endingTitle = "【錯誤：連線被強制中斷】\n主角拒絕了你的入侵，世界已永久關閉。";
+                    soundManager.playBGM('ending_bad');
+                } else if (endingType === "escapism") {
+                    endingTitle = "【逃避：永恆之雨】";
+                    soundManager.playBGM('ending_bad');
+                } else {
+                    soundManager.playBGM('ending_good');
+                }
+                
                 setTimeout(() => {
-                    alert("遊戲結束: " + data.new_state.ending);
+                    alert("遊戲結束：" + endingTitle);
                     location.reload();
                 }, 5000);
             }

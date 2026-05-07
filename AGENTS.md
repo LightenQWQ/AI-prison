@@ -34,6 +34,7 @@
 - 2026-04-24 : 完成「Noir 內在視角 (Inner Perspective)」UI 革命，全面移除監視器元素，改為沉浸式漂浮 HUD。實裝「視覺引擎 2.0」，原生支持 16:9 電影比例並徹底消除漫畫網點 (Halftone)。
 - 2026-05-05 : 實裝「麵包屑解謎」與「100% 強制怪誕敘事」，建立完善的文件架構 (docs/ 與 CHANGELOG)，並解決生圖模型的語意滲透 (Semantic Bleed) 色彩問題。
 - 2026-05-06 : 升級至 V22.5「情緒感應視覺系統」，實裝色彩殺手協議 (Color Killer Protocol) 與分鏡解放邏輯，達成 100% 二色調藝術渲染。
+- 2026-05-07 : 完成 V34.0「情感優先敘事引擎」，實裝雙階段敘事（情感接觸期→解謎期）、主角抗拒機制 (comply/refuse/opposite)、Heavy Ink Noir V33.8 視覺 DNA，並鎖定 gemini-flash-latest 別名解決 404 問題。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.
@@ -56,6 +57,10 @@
 | 2026-05-05 | web | Implemented "STRICTLY GRAYSCALE. NO COLORS." to fix Semantic Bleed | high | [VERIFIED] | - | Active | - | - |
 | 2026-05-06 | web | Migrated to "Artistic Brush Mode" (V22.5) using Color Killer Protocol | high | [VERIFIED] | - | Active | - | - |
 | 2026-05-06 | web | Implemented "Emotional Style Shifting" (Noir Ink vs Manga Screen-tone) | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-07 | web | Locked `gemini-flash-latest` alias for AI Studio to avoid version 404 errors | high | [VERIFIED] Live scan | - | Active | - | - |
+| 2026-05-07 | web | Implemented V34.0 dual-phase narrative: emotional_stage 0→1, resistance_type mechanic | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-07 | web | Upgraded Visual DNA to Heavy Ink Noir V33.8: DENSE BLACK INK FILLS, NO WHITE VOIDS | high | [VERIFIED] | - | Active | - | - |
+| 2026-05-07 | web | Restructured UI layout: dialogue overlaid on scene image, narration pinned to bottom strip | high | [VERIFIED] | - | Active | - | - |
 | 2026-05-06 | web | Enabled "Cinematic Framing Liberation" (AI-driven camera angles) | high | [VERIFIED] | - | Active | - | - |
 ## 🔐 Environment Variables Protocol
 - All secrets MUST live in `.env` (never hardcode in source).
