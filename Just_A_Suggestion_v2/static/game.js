@@ -147,20 +147,100 @@ class SoundManager {
         this.bgm = new Audio();
         this.bgm.loop = true;
         this.bgmVolume = 0.3;
-        this.bgm.volume = this.bgmVolume;
+        this.bgm.volume = 0; // 初始音量0，準備淡入
+        
+        // 統一全程使用 custom_bgm.mp3
         this.tracks = {
-            intro: "https://assets.mixkit.co/music/preview/mixkit-ethereal-dreams-442.mp3",
-            game: "https://assets.mixkit.co/music/preview/mixkit-horror-ambient-94.mp3",
-            ending_good: "https://assets.mixkit.co/music/preview/mixkit-sad-piano-reflections-564.mp3",
-            ending_bad: "https://assets.mixkit.co/music/preview/mixkit-suspense-horror-piano-557.mp3"
+            intro: "assets/custom_bgm.mp3",
+            game: "assets/custom_bgm.mp3",
+            ending_good: "https://cdn.pixabay.com/download/audio/2022/10/25/audio_2267b2d556.mp3?filename=sad-piano-ambient-123473.mp3",
+            ending_bad: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_031bb29e05.mp3?filename=scary-ambient-horror-12398.mp3"
         };
+
+        this.rainNode = null;
+        this.isMuted = false;
     }
 
+    // 淡入淡出 BGM 播放
     playBGM(type) {
-        if (this.tracks[type]) {
-            this.bgm.src = this.tracks[type];
-            this.bgm.play().catch(e => console.log("Audio play blocked", e));
+        if (this.isMuted) return;
+        const targetSrc = this.tracks[type];
+        if (!targetSrc) return;
+
+        // 如果目前已經在播放同一個檔案，就不要中斷重放，保持流暢
+        if (this.bgm.src.includes(targetSrc) && !this.bgm.paused) {
+            console.log(`BGM ${type} is already playing, skipping reset.`);
+            return;
         }
+
+        if (this.bgm.src) {
+            // 淡出淡入邏輯
+            let vol = this.bgm.volume;
+            const fadeOut = setInterval(() => {
+                vol = Math.max(0, vol - 0.05);
+                this.bgm.volume = vol;
+                if (vol <= 0) {
+                    clearInterval(fadeOut);
+                    this.bgm.src = targetSrc;
+                    this.bgm.play().then(() => {
+                        const fadeIn = setInterval(() => {
+                            vol = Math.min(this.bgmVolume, vol + 0.02);
+                            this.bgm.volume = vol;
+                            if (vol >= this.bgmVolume) clearInterval(fadeIn);
+                        }, 100);
+                    }).catch(e => console.log("Audio play blocked", e));
+                }
+            }, 100);
+        } else {
+            // 第一次播放
+            this.bgm.src = targetSrc;
+            this.bgm.play().then(() => {
+                this.bgm.volume = this.bgmVolume;
+            }).catch(e => console.log("Audio play blocked", e));
+        }
+    }
+
+    // 常駐背景雨聲 - 直接播放使用者提供的 rain_bgm.mp3
+    startRain() {
+        if (this.rainAudio) return; // 避免重複啟動
+        this.rainAudio = new Audio('assets/rain_bgm.mp3');
+        this.rainAudio.loop = true;
+        this.rainAudio.volume = 0.5; // 調高預設雨聲，營造下大雨的感覺
+        this.rainAudio.play().catch(e => console.log('Rain audio blocked:', e));
+        // rainNode 保留供靜音控制用
+        this.rainNode = { _isFile: true };
+    }
+
+    // 模擬紙張翻頁的音效 (Web Audio API)
+    playPageTurn() {
+        if(this.isMuted || this.audioCtx.state === 'suspended') return;
+        
+        const bufferSize = this.audioCtx.sampleRate * 0.4; // 0.4秒長度
+        const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+        }
+
+        const whiteNoise = this.audioCtx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+
+        // 帶通濾波器：保留紙張摩擦的頻段 (約 1000Hz - 2000Hz)
+        const filter = this.audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1500;
+        
+        // 音量包絡線 (Envelope)：模擬「唰」一聲的動態
+        const gain = this.audioCtx.createGain();
+        gain.gain.setValueAtTime(0, this.audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.6, this.audioCtx.currentTime + 0.05); // 快速達到最大聲
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3); // 慢慢滑落
+
+        whiteNoise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        
+        whiteNoise.start();
     }
 
     playBeep() {
@@ -177,6 +257,7 @@ class SoundManager {
     }
 
     playGlitch() {
+        if (this.isMuted) return;
         const bufferSize = this.audioCtx.sampleRate * 0.2;
         const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -197,20 +278,31 @@ class SoundManager {
 }
 
 const dreamSequence = [
-    "雨滴落下的聲音..... 濕冷，刺骨。",
-    "我不知道在躲什麼，只知道不能停下來。",
-    "這個聲音..... 是從我腦子裡冒出來的嗎？",
-    "『只是一個建議』..... 它這麼說。"
+    "冰冷的雨水不斷落在屋簷上，濺起細小的水花。",
+    "生鏽的排水管發出沉悶的低鳴，迴盪在無人的巷弄裡。",
+    "霓虹燈的倒影在積水中破碎，又隨著水滴重新匯聚。",
+    "就在這片寂靜的雨聲中，我聽見了一個聲音。"
 ];
 
 const introSequence = [
-    { text: "....", desc: "心靈防火牆滲透中。意識鏈接完成。", img: "assets/intro_start.png" },
-    { text: "....", desc: "他在這座無名雨城中徘徊。這不是真實的世界，而是他為了躲避遺棄而創造的幻覺。", img: "assets/intro_start.png" },
-    { text: "....", desc: "你是他殘存的直覺。試著開導他，帶他走出這場名為逃避的雨。", img: "assets/intro_start.png" }
+    { text: "....", desc: "一位少年，孤身佇立在深夜的巷道盡頭。路燈的光暈在濕地上暈開，像一個沒人回答的問題。", img: "assets/cover_v3.png" },
+    { text: "....", desc: "他不知道自己在等什麼。雨滴打在他的肩膀上，他沒有躲避，就這樣站著。", img: "assets/cover_v3.png" },
+    { text: "....", desc: "你感覺到了他。他的某一部分，正在向外呼喊——儘管他自己還沒有察覺。", img: "assets/cover_v3.png" }
 ];
 
 let introIndex = 0;
 let isSkippingPrologue = false;
+
+function skipPrologue() {
+    isSkippingPrologue = true;
+    const overlay = document.getElementById('prologue-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 500);
+    }
+}
 
 // 啟動
 window.onload = () => {
@@ -219,19 +311,40 @@ window.onload = () => {
 
 async function startGame() {
     isSkippingPrologue = false;
-    soundManager = new SoundManager();
+    
+    // 如果全域已經有 soundManager (來自 index.html 啟動)，則沿用，避免重複播放
+    if (!window.soundManager) {
+        window.soundManager = new SoundManager();
+    }
+    soundManager = window.soundManager; 
+    
     waveEngine = new WaveformEngine();
     
     document.getElementById('overlay').classList.add('fading');
-    document.getElementById('monitor-osd-bar').style.display = 'flex';
+    
+    // 序章期間保持背景純淨，暫時不顯示遊戲介面
+    setTimeout(() => {
+        // 僅移除舊的顯示邏輯
+    }, 100);
     setTimeout(() => {
         document.getElementById('overlay').style.display = 'none';
+        
+        // 為了確保 AudioContext 解鎖，必須在 user click 之後恢復
+        if (soundManager.audioCtx.state === 'suspended') {
+            soundManager.audioCtx.resume();
+        }
+        
+        soundManager.startRain(); // 啟動全代碼生成的暴雨聲
         soundManager.playBGM('intro');
     }, 1000);
 
     await playDreamSequence();
 
     if (isSkippingPrologue) {
+        // 跳過時也必須顯現遊戲介面
+        document.getElementById('game-container').style.setProperty('display', 'flex', 'important');
+        document.getElementById('monitor-osd-bar').style.display = 'flex';
+
         soundManager.playBGM('game');
         document.getElementById('scene-image').style.display = 'block';
         document.getElementById('scene-image').style.opacity = '1';
@@ -244,8 +357,12 @@ async function startGame() {
         return;
     }
 
+    // 序章結束，正式顯示遊戲介面與儀表板
+    document.getElementById('game-container').style.setProperty('display', 'flex', 'important');
+    document.getElementById('monitor-osd-bar').style.display = 'flex';
+    
     triggerBootGlitch();
-    soundManager.playGlitch();
+    // 已依照要求移除監視器啟動音效 (playGlitch)
     soundManager.playBGM('game');
     showNextIntro();
 }
@@ -253,14 +370,22 @@ async function startGame() {
 async function playDreamSequence() {
     const overlay = document.getElementById('prologue-overlay');
     overlay.style.display = 'flex';
+    // 將 SKIP 按鈕只建立一次
+    overlay.innerHTML = '<div id="skip-btn" onclick="skipPrologue()">SKIP >></div>';
     
     for (let text of dreamSequence) {
         if (isSkippingPrologue) break;
+        
+        // 每次只保留一個 p 標籤，避免水平或垂直堆疊造成位移
+        const oldP = overlay.querySelector('.dream-text');
+        if (oldP) oldP.remove();
+
         const p = document.createElement('p');
         p.className = 'dream-text';
         p.innerText = text;
-        overlay.innerHTML = '<div id="skip-btn" onclick="skipPrologue()">SKIP >></div>';
         overlay.appendChild(p);
+        
+        // 已依照要求移除翻頁音效
         
         for (let i = 0; i < 40; i++) {
             if (isSkippingPrologue) break;
@@ -269,7 +394,7 @@ async function playDreamSequence() {
     }
     
     if (!isSkippingPrologue) {
-        overlay.style.transition = 'opacity 0.5s';
+        overlay.style.transition = 'opacity 2s ease';
         overlay.style.opacity = '0';
         setTimeout(() => {
             overlay.style.display = 'none';
@@ -313,7 +438,15 @@ function updateUI(data) {
     // 主角對白 → 白色對話框
     if (data.dialogue !== undefined) {
         // 若 Gemini 成功回傳但 dialogue 為空字串，顯示省略號而非「保持沉默」
-        document.getElementById('text-content').innerText = data.dialogue || '......';
+        const text = data.dialogue || '......';
+        document.getElementById('text-content').innerText = text;
+        
+        // 移除每回合的翻頁音效呼叫
+        /*
+        if(soundManager) {
+            soundManager.playPageTurn();
+        }
+        */
     }
 
     // 旁白區：小字灰色
@@ -340,12 +473,23 @@ function updateUI(data) {
     if (data.image_b64) {
         const sceneImg = document.getElementById('scene-image');
         sceneImg.style.opacity = "0";
+        sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)"; // 轉場開始：模糊
+        
         setTimeout(() => {
             sceneImg.src = "data:image/png;base64," + data.image_b64;
             sceneImg.style.opacity = "1";
+            sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)"; // 轉場結束：清晰
         }, 300);
     } else if (data.image_url) {
-        document.getElementById('scene-image').src = data.image_url;
+        const sceneImg = document.getElementById('scene-image');
+        sceneImg.style.opacity = "0";
+        sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)";
+        
+        setTimeout(() => {
+            sceneImg.src = data.image_url;
+            sceneImg.style.opacity = "1";
+            sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
+        }, 100);
     }
 
     if (data.new_state) {
@@ -414,22 +558,22 @@ function showMemoryFragment(text) {
 
 // 預設開場獨白（主角思緒碎片）
 const DEFAULT_MONOLOGUES = [
-    "雨好大..... 回不去了。",
-    "你是誰？為什麼在跟我說話？",
-    "不要叫我做那個..... 我做不到。",
-    "我看到的那些東西..... 如果是真的該怎麼辦？",
-    "這座城市好安靜..... 靜得讓人害怕。",
-    "救救我..... 或者是，殺了我。"
+    "這條路..... 我每天都走，可今晚感覺走不完。",
+    "不想回家..... 家裡也沒有人在等。",
+    "雨聲把什麼都蓋掉了..... 挺好的。",
+    "為什麼要跟我說話？你是誰？",
+    "我沒事..... 不，我說謊了。",
+    "就算我一直站在這裡，也不會有人發現吧。"
 ];
 
 // 等待生圖期間的旁白池（每 5 秒輪換）
 const WAITING_NARRATIONS = [
-    "（他在雨中低頭，試著推開那些沉重的雜音⋯⋯）",
-    "（這座城市正在微微顫抖，幻覺的邊緣開始剝落⋯⋯）",
-    "（他聽見了，那是他不願回想的爭吵聲⋯⋯）",
-    "（你在他的意識邊緣徘徊，試著點亮一盞燈⋯⋯）",
-    "（雨滴停在半空，時間在這裡失去了意義⋯⋯）",
-    "（真相就在那道門後，但他還沒有準備好⋯⋯）"
+    "（他的視線停在積水的地面，路燈的倒影在水中顫抖⋯⋯）",
+    "（他握緊了口袋裡的手，那裡什麼都沒有，卻很安心⋯⋯）",
+    "（他閉上眼，試著讓雨聲蓋過腦子裡那些旋轉的問題⋯⋯）",
+    "（他想起一個人，但馬上把那個名字推開了⋯⋯）",
+    "（他知道你在那裡。他假裝不知道⋯⋯）",
+    "（他深吸一口氣，雨水的氣味混著鐵鏽，讓他清醒了一秒⋯⋯）"
 ];
 
 function toggleDebug() {
@@ -513,25 +657,30 @@ async function sendSuggestion() {
         } else {
             updateUI(data);
             
-            // ✅ 修正：加入 null 安全檢查
             if (data.new_state && data.new_state.is_over) {
+                // 播放結局音樂
                 const endingType = data.new_state.ending || "awakening";
-                let endingTitle = "【覺醒：面對現實】";
-                if (endingType === "connection_lost") {
-                    endingTitle = "【錯誤：連線被強制中斷】\n主角拒絕了你的入侵，世界已永久關閉。";
-                    soundManager.playBGM('ending_bad');
-                } else if (endingType === "escapism") {
-                    endingTitle = "【逃避：永恆之雨】";
+                if (endingType === "connection_lost" || endingType === "escapism") {
                     soundManager.playBGM('ending_bad');
                 } else {
                     soundManager.playBGM('ending_good');
                 }
                 
+                // 顯示全螢幕結局畫面
                 setTimeout(() => {
-                    alert("遊戲結束：" + endingTitle);
-                    location.reload();
-                }, 5000);
+                    const endScreen = document.getElementById('ending-screen');
+                    const titleEl = document.getElementById('ending-title-display');
+                    const narrativeEl = document.getElementById('ending-narrative-display');
+                    
+                    titleEl.innerText = data.ending_title || "【結局】";
+                    narrativeEl.innerText = data.ending_narrative || "雨不停歇。這座城市將再次歸於沉默。";
+                    
+                    endScreen.style.display = 'flex';
+                    // 觸發漸入動畫
+                    setTimeout(() => endScreen.style.opacity = '1', 50);
+                }, 4000); // 讓玩家先看最後一張圖 4 秒再切入結局
             }
+
         }
     } catch (e) {
         console.error(e);
@@ -540,6 +689,82 @@ async function sendSuggestion() {
     } finally {
         document.getElementById('submit-btn').disabled = false;
         input.focus();
+    }
+}
+
+// ============================================================
+// 音效控制面板
+// ============================================================
+
+let audioPanelOpen = false;
+
+function toggleAudioPanel() {
+    audioPanelOpen = !audioPanelOpen;
+    const panel = document.getElementById('audio-controls-panel');
+    panel.style.display = audioPanelOpen ? 'block' : 'none';
+}
+
+function toggleAudio() {
+    // 如果尚未初始化，則進行初始化
+    if (!window.soundManager) {
+        window.soundManager = new SoundManager();
+        soundManager = window.soundManager;
+    }
+    
+    soundManager.isMuted = !soundManager.isMuted;
+
+    const btn = document.getElementById('mute-btn');
+    if (soundManager.isMuted) {
+        btn.innerText = 'OFF';
+        btn.style.color = '#ff6666';
+        btn.style.borderColor = 'rgba(255,102,102,0.4)';
+        soundManager.bgm.pause();
+        if (soundManager.rainAudio) soundManager.rainAudio.pause();
+    } else {
+        btn.innerText = 'ON';
+        btn.style.color = '#88cc88';
+        btn.style.borderColor = 'rgba(136,204,136,0.4)';
+        
+        // 解鎖音訊環境
+        if (soundManager.audioCtx && soundManager.audioCtx.state === 'suspended') {
+            soundManager.audioCtx.resume();
+        }
+
+        // 恢復播放
+        if (soundManager.bgm.src) {
+            soundManager.bgm.play().catch(e => {});
+        } else {
+            soundManager.playBGM('intro');
+        }
+
+        if (soundManager.rainAudio) {
+            soundManager.rainAudio.play().catch(e => {});
+        } else {
+            soundManager.startRain();
+        }
+    }
+}
+
+function setBgmVolume(val) {
+    document.getElementById('bgm-vol-label').innerText = val + '%';
+    if (!window.soundManager) {
+        window.soundManager = new SoundManager();
+        soundManager = window.soundManager;
+    }
+    if (soundManager && soundManager.bgm) {
+        soundManager.bgmVolume = val / 100;
+        soundManager.bgm.volume = val / 100;
+    }
+}
+
+function setRainVolume(val) {
+    document.getElementById('rain-vol-label').innerText = val + '%';
+    if (!window.soundManager) {
+        window.soundManager = new SoundManager();
+        soundManager = window.soundManager;
+    }
+    if (soundManager && soundManager.rainAudio) {
+        soundManager.rainAudio.volume = val / 100;
     }
 }
 

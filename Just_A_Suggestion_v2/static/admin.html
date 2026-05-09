@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just A Suggestion - 觀測後台</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background-color: #0a0a0a; color: #d0d0d0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex; height: 100vh; overflow: hidden;
+        }
+        
+        /* 側邊欄 */
+        #sidebar {
+            width: 300px; background: #111; border-right: 1px solid #333;
+            display: flex; flex-direction: column; height: 100%;
+        }
+        .header {
+            padding: 20px; border-bottom: 1px solid #333;
+            font-weight: bold; color: #fff; letter-spacing: 2px;
+        }
+        #run-list {
+            flex-grow: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0;
+        }
+        .run-item {
+            padding: 15px 20px; border-bottom: 1px solid #222; cursor: pointer;
+            transition: background 0.2s;
+        }
+        .run-item:hover { background: #1a1a1a; }
+        .run-item.active { background: #252525; border-left: 3px solid #666; }
+        .run-time { font-size: 0.8em; color: #888; }
+        .run-title { margin-top: 5px; color: #ccc; }
+
+        /* 主內容區 */
+        #content {
+            flex-grow: 1; padding: 30px; overflow-y: auto;
+            display: flex; flex-direction: column;
+        }
+        #summary-box {
+            background: #151515; border: 1px solid #333; padding: 20px;
+            margin-bottom: 30px; border-radius: 4px;
+        }
+        #summary-box h2 { margin-top: 0; color: #fff; }
+        
+        .timeline { margin-top: 20px; }
+        .turn-card {
+            background: #151515; border: 1px solid #333; margin-bottom: 20px;
+            border-radius: 4px; overflow: hidden;
+        }
+        .turn-header {
+            background: #1a1a1a; padding: 10px 15px; border-bottom: 1px solid #333;
+            display: flex; justify-content: space-between; font-weight: bold;
+        }
+        .turn-body { padding: 15px; display: flex; gap: 20px; }
+        
+        .log-section { flex: 1; }
+        .log-label { color: #777; font-size: 0.8em; margin-bottom: 5px; text-transform: uppercase; }
+        .log-text { margin-bottom: 15px; line-height: 1.5; color: #eee; }
+        .log-text.user { color: #88cc88; }
+        
+        .meta-section {
+            width: 350px; background: #0c0c0c; border: 1px solid #222; padding: 15px;
+            font-size: 0.85em; border-radius: 4px; color: #aaa;
+        }
+        .meta-group { margin-bottom: 15px; }
+        .meta-group:last-child { margin-bottom: 0; }
+        .meta-title { color: #fff; margin-bottom: 8px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 3px; }
+        
+        .error-text { color: #ff6666; font-weight: bold; }
+        .warning-text { color: #ffcc00; }
+        
+        /* 捲軸美化 */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div class="header">
+            SYSTEM.OBSERVE<br><span style="font-size:0.6em;color:#666;">JUST A SUGGESTION ADMIN</span>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button id="tab-runs" onclick="switchTab('runs')" style="flex:1; background:#222; color:#fff; border:1px solid #444; padding:5px; cursor:pointer; font-family:'Courier New', monospace;">SUCCESS</button>
+                <button id="tab-errors" onclick="switchTab('errors')" style="flex:1; background:#222; color:#666; border:1px solid #444; padding:5px; cursor:pointer; font-family:'Courier New', monospace;">ERRORS</button>
+            </div>
+        </div>
+        <ul id="run-list">
+            <li style="padding: 20px; color: #666;">載入中...</li>
+        </ul>
+    </div>
+
+    <div id="content">
+        <div id="summary-box" style="display: none;">
+            <h2 id="s-title">【結局標題】</h2>
+            <div style="color: #ccc; margin-bottom: 15px; font-style: italic;" id="s-narrative">結局敘事...</div>
+            <div style="display: flex; gap: 30px; font-size: 0.9em; color: #888;">
+                <div>總回合：<span id="s-turns" style="color: #fff"></span></div>
+                <div>最終恐懼：<span id="s-fear" style="color: #fff"></span>%</div>
+                <div>取得物品：<span id="s-inv" style="color: #fff"></span></div>
+                <div>結局代碼：<span id="s-code" style="color: #fff"></span></div>
+                <div>時間：<span id="s-time" style="color: #fff"></span></div>
+            </div>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <div style="color: #444; margin-top: 50px;">請從左側選擇一份遊玩紀錄以進行觀測。</div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'runs';
+        let runList = [];
+        let errorList = [];
+
+        async function loadRuns() {
+            try {
+                const res = await fetch('/api/admin/runs');
+                const data = await res.json();
+                runList = data.runs || [];
+                errorList = data.errors || [];
+                renderList();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-runs').style.color = tab === 'runs' ? '#fff' : '#666';
+            document.getElementById('tab-errors').style.color = tab === 'errors' ? '#ff6666' : '#666';
+            renderList();
+        }
+
+        function renderList() {
+            const listEl = document.getElementById('run-list');
+            listEl.innerHTML = '';
+            
+            const list = currentTab === 'runs' ? runList : errorList;
+            
+            if(list.length === 0) {
+                listEl.innerHTML = '<li style="padding:20px;color:#666;">尚無任何紀錄</li>';
+                return;
+            }
+            
+            list.forEach(filename => {
+                const li = document.createElement('li');
+                li.className = 'run-item';
+                
+                // 從檔名解析時間
+                const isError = filename.startsWith('error_');
+                const parts = filename.replace('run_', '').replace('error_', '').replace('.json', '').split('_');
+                let timeStr = filename;
+                if(parts.length === 2) {
+                    const d = parts[0]; const t = parts[1];
+                    timeStr = `${d.substring(0,4)}/${d.substring(4,6)}/${d.substring(6,8)} ${t.substring(0,2)}:${t.substring(2,4)}`;
+                }
+
+                li.innerHTML = `
+                    <div class="run-time" style="${isError ? 'color:#aa4444' : ''}">${timeStr}</div>
+                    <div class="run-title" style="${isError ? 'color:#ff6666' : ''}">${filename}</div>
+                `;
+                li.onclick = () => {
+                    document.querySelectorAll('.run-item').forEach(el => el.classList.remove('active'));
+                    li.classList.add('active');
+                    viewRun(filename);
+                };
+                listEl.appendChild(li);
+            });
+        }
+
+        async function viewRun(filename) {
+            const timelineEl = document.getElementById('timeline');
+            timelineEl.innerHTML = '<div style="color: #666;">讀取紀錄中...</div>';
+            
+            try {
+                const res = await fetch(`/api/admin/runs/${filename}`);
+                const data = await res.json();
+                
+                const isError = filename.startsWith('error_');
+
+                // 顯示摘要
+                document.getElementById('summary-box').style.display = 'block';
+                if(isError) {
+                    document.getElementById('summary-box').style.border = '1px solid #aa3333';
+                    document.getElementById('s-title').innerText = '【系統異常崩潰】';
+                    document.getElementById('s-title').style.color = '#ff6666';
+                    document.getElementById('s-narrative').innerText = `錯誤類型：${data.error_type}\n錯誤訊息：${data.error_message}`;
+                    document.getElementById('s-turns').innerText = data.turn || 'N/A';
+                    document.getElementById('s-fear').innerText = data.fear_level || 'N/A';
+                    document.getElementById('s-inv').innerText = 'N/A';
+                    document.getElementById('s-code').innerText = 'CRASH';
+                } else {
+                    document.getElementById('summary-box').style.border = '1px solid #333';
+                    document.getElementById('s-title').innerText = data.ending_title || '無結局標題';
+                    document.getElementById('s-title').style.color = '#fff';
+                    document.getElementById('s-narrative').innerText = data.ending_narrative || '（無結局文字）';
+                    document.getElementById('s-turns').innerText = data.total_turns;
+                    document.getElementById('s-fear').innerText = data.final_fear;
+                    document.getElementById('s-inv').innerText = (data.inventory && data.inventory.length > 0) ? data.inventory.join(', ') : '無';
+                    document.getElementById('s-code').innerText = data.ending_type || 'unknown';
+                }
+                
+                const d = new Date(data.timestamp);
+                document.getElementById('s-time').innerText = isNaN(d) ? data.timestamp : d.toLocaleString();
+
+                // 渲染時間軸
+                timelineEl.innerHTML = '';
+                const historyData = isError ? data.history_snapshot : data.history;
+                
+                if (!historyData || historyData.length === 0) {
+                    timelineEl.innerHTML = '<div style="color: #666;">無回合紀錄</div>';
+                    return;
+                }
+
+                historyData.forEach(turn => {
+                    const tMeta = turn.text_metadata || {};
+                    const vMeta = turn.vision_metadata || {};
+                    
+                    let textErr = tMeta.error ? `<div class="error-text">⚠ Text API Error: ${tMeta.error}</div>` : '';
+                    let visionErr = vMeta.error ? `<div class="error-text">⚠ Vision API Error: ${vMeta.error}</div>` : '';
+
+                    const card = document.createElement('div');
+                    card.className = 'turn-card';
+                    card.innerHTML = `
+                        <div class="turn-header">
+                            <span>TURN ${turn.turn}</span>
+                            <span style="color: ${turn.fear_level > 50 ? '#ff6666' : '#88cc88'}">FEAR: ${turn.fear_level}%</span>
+                        </div>
+                        <div class="turn-body">
+                            <div class="log-section">
+                                <div class="log-label">玩家輸入</div>
+                                <div class="log-text user">> ${turn.user_suggestion || '（無輸入）'}</div>
+                                
+                                <div class="log-label">主角對話</div>
+                                <div class="log-text">「${turn.dialogue || '...'}」</div>
+                                
+                                <div class="log-label">系統旁白</div>
+                                <div class="log-text" style="color: #aaa; font-style: italic;">（${turn.narration || ''}）</div>
+                                
+                                ${turn.clue_found ? `<div class="log-label" style="color:#eecc66">🔎 發現線索：${turn.clue_found}</div>` : ''}
+                            </div>
+                            
+                            <div class="meta-section">
+                                <div class="meta-group">
+                                    <div class="meta-title">LLM 文字引擎</div>
+                                    <div>Model: ${tMeta.model || 'unknown'}</div>
+                                    <div style="color: ${tMeta.latency > 3 ? '#ffcc00' : '#88cc88'}">Latency: ${tMeta.latency || 0}s</div>
+                                    ${textErr}
+                                </div>
+                                <div class="meta-group">
+                                    <div class="meta-title">Imagen 視覺引擎</div>
+                                    <div>Model: ${vMeta.model || 'unknown'}</div>
+                                    <div style="color: ${vMeta.latency > 6 ? '#ffcc00' : '#88cc88'}">Latency: ${vMeta.latency || 0}s</div>
+                                    <div style="margin-top:5px; font-size:0.9em; color:#777;">Camera: ${turn.camera_angle || 'medium'}</div>
+                                    <div style="margin-top:5px; font-size:0.9em; color:#555; background:#111; padding:5px; border-radius:3px; max-height:80px; overflow-y:auto;">Prompt: ${turn.image_prompt || ''}</div>
+                                    ${visionErr}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    timelineEl.appendChild(card);
+                });
+
+            } catch (e) {
+                console.error(e);
+                timelineEl.innerHTML = `<div class="error-text">讀取失敗：${e.message}</div>`;
+            }
+        }
+
+        // 載入列表
+        loadRuns();
+    </script>
+
+</body>
+</html>

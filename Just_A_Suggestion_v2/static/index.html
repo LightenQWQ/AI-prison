@@ -10,16 +10,90 @@
     <!-- 全域降雨效果層 -->
     <canvas id="rain-canvas" style="position: fixed; inset: 0; z-index: 600; pointer-events: none; opacity: 0.4;"></canvas>
 
+    <!-- 全域音效控制面板 -->
+    <div id="audio-panel" style="
+        position: fixed; top: 25px; left: 35px; z-index: 9999;
+        font-family: 'Courier New', monospace; font-size: 0.75rem;
+        letter-spacing: 3px; user-select: none;
+    ">
+        <!-- 主按鈕 -->
+        <div id="audio-toggle-btn" onclick="toggleAudioPanel()" style="
+            color: rgba(255,255,255,0.4); cursor: pointer;
+            border: 1px solid transparent; padding: 5px 10px;
+            transition: all 0.3s; text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0,0,0,0.9);
+        " onmouseover="this.style.color='#fff'; this.style.borderColor='rgba(255,255,255,0.4)';"
+           onmouseout="this.style.color='rgba(255,255,255,0.4)'; this.style.borderColor='transparent';">
+            ♪ AUDIO
+        </div>
+
+        <!-- 展開的控制面板 -->
+        <div id="audio-controls-panel" style="
+            display: none; margin-top: 6px;
+            background: rgba(0,0,0,0.75); border: 1px solid rgba(255,255,255,0.12);
+            padding: 14px 16px; backdrop-filter: blur(6px);
+            min-width: 200px;
+        ">
+            <!-- 靜音開關 -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span style="color: rgba(255,255,255,0.5);">MUTE</span>
+                <div id="mute-btn" onclick="toggleAudio()" style="
+                    color: #88cc88; cursor: pointer; letter-spacing: 2px;
+                    border: 1px solid rgba(136,204,136,0.4); padding: 2px 8px;
+                    transition: all 0.3s; font-size: 0.7rem;
+                ">ON</div>
+            </div>
+
+            <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.08); margin-bottom: 12px;"></div>
+
+            <!-- BGM 音量 -->
+            <div style="margin-bottom: 10px;">
+                <div style="color: rgba(255,255,255,0.4); margin-bottom: 5px; font-size: 0.7rem;">
+                    BGM &nbsp;<span id="bgm-vol-label" style="color:rgba(255,255,255,0.6)">30%</span>
+                </div>
+                <input id="bgm-slider" type="range" min="0" max="100" value="30"
+                    oninput="setBgmVolume(this.value)"
+                    style="width: 100%; accent-color: #aaa; cursor: pointer; height: 3px;">
+            </div>
+
+            <!-- 雨聲音量 -->
+            <div>
+                <div style="color: rgba(255,255,255,0.4); margin-bottom: 5px; font-size: 0.7rem;">
+                    RAIN &nbsp;<span id="rain-vol-label" style="color:rgba(255,255,255,0.6)">50%</span>
+                </div>
+                <input id="rain-slider" type="range" min="0" max="100" value="50"
+                    oninput="setRainVolume(this.value)"
+                    style="width: 100%; accent-color: #aaa; cursor: pointer; height: 3px;">
+            </div>
+        </div>
+    </div>
+
+    <!-- [新增] 前置入口：解鎖音訊並進入夢境 -->
+    <div id="pre-entry" style="
+        position: fixed; inset: 0; z-index: 10000;
+        background: #000; display: flex; align-items: center; justify-content: center;
+        transition: opacity 2s ease-in-out;
+    ">
+        <button onclick="enterDream()" style="
+            background: transparent; border: 1px solid rgba(255,255,255,0.2);
+            color: #888; padding: 15px 40px; cursor: pointer;
+            letter-spacing: 10px; font-family: 'EB Garamond', serif;
+            font-size: 1.2rem; transition: all 0.8s;
+        " onmouseover="this.style.color='#fff'; this.style.borderColor='#fff';" onmouseout="this.style.color='#888'; this.style.borderColor='rgba(255,255,255,0.2)';">
+            [ 進入夢境 ]
+        </button>
+    </div>
+
     <div id="overlay">
-        <!-- 全螢幕動態影片背景 -->
-        <video id="cover-video" autoplay muted loop playsinline style="
+        <!-- 全螢幕背景影片序列 -->
+        <video id="cover-video" muted playsinline style="
             position: absolute; inset: 0;
             width: 100%; height: 100%;
             object-fit: cover;
-            filter: brightness(0.5) contrast(1.2) grayscale(0.2);
-            z-index: 0;
+            z-index: 1;
+            filter: brightness(0.6) contrast(1.1);
         ">
-            <source src="assets/video.mp4" type="video/mp4">
+            <source src="assets/1.0.mp4" type="video/mp4">
         </video>
 
         <!-- 腦內聲音雜訊：局部掃描線效果 (位於畫面中上方) -->
@@ -38,6 +112,8 @@
             background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.7) 100%);
             z-index: 2; pointer-events: none;
         "></div>
+
+
 
         <!-- [文字錯位佈局] -->
         
@@ -59,11 +135,13 @@
             animation: text-float 8s ease-in-out infinite reverse;
         ">⋯⋯是你，還是我？</div>
 
-        <!-- 核心內容區 -->
-        <div style="
+        <!-- 核心內容區 (初始隱藏，待 2.0 動畫開始時顯現) -->
+        <div id="title-container" style="
             position: relative; z-index: 4;
             display: flex; flex-direction: column; align-items: center;
             height: 100%; width: 100%;
+            opacity: 0; transition: opacity 3s ease-in-out;
+            pointer-events: none; /* 防止動畫結束前誤觸按鈕 */
         ">
             <!-- [響應式標題] 寬屏單行，豎屏雙行 -->
             <div style="margin-top: 35vh; width: 100%; text-align: center; padding: 0 5vw; box-sizing: border-box;">
@@ -77,13 +155,13 @@
             <!-- [去框化按鈕] -->
             <div style="margin-top: auto; padding-bottom: 10vh;">
                 <button class="btn-terminal" onclick="startGame()">
-                    [ 建立連線 ]
+                    [ 深入雨夜 ]
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="game-container" style="border: none; box-shadow: none; padding: 0; width: 100vw; height: 100vh; max-width: none;">
+    <div id="game-container" style="display: none; border: none; box-shadow: none; padding: 0; width: 100vw; height: 100vh; max-width: none; flex-direction: column;">
         <!-- 儀表板改為隱藏狀態，保留 DOM 供 JS 更新數據，但不再顯示 -->
         <header id="monitor-dashboard" style="display: none;"></header>
 
@@ -118,17 +196,18 @@
 
         <!-- ⭐ 旁白固定在底部 -->
         <p id="narrator-text" style="
-            color: #888888;
+            color: #c0c0c0;
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 0.95rem;
             letter-spacing: 2px;
             font-style: italic;
-            padding: 10px 10%;
+            padding: 14px 10%;
             min-height: 2.5em;
-            line-height: 1.8;
-            background: rgba(0,0,0,0.85);
-            border-top: 1px solid rgba(255,255,255,0.05);
+            line-height: 1.9;
+            background: rgba(0,0,0,0.88);
+            border-top: 1px solid rgba(255,255,255,0.08);
             margin: 0;
+            text-shadow: 0 1px 6px rgba(0,0,0,1);
         "></p>
 
         <div id="input-area" style="width: 50%; max-width: 500px; margin: 0 auto 50px auto; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0;">
@@ -141,39 +220,76 @@
         </div>
     </div>
 
-    <!-- 音效與 BGM (可替換) -->
-    <audio id="bgm" loop>
-        <source src="https://ia800109.us.archive.org/30/items/DarkAmbient_728/DarkAmbient.mp3" type="audio/mpeg">
-    </audio>
+    <!-- 結局全螢幕覆蓋層 -->
+    <div id="ending-screen" style="
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: #000; z-index: 9999; display: none; 
+        flex-direction: column; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 3s ease-in-out;
+        padding: 40px; box-sizing: border-box; text-align: center;
+    ">
+        <h1 id="ending-title-display" style="color: #fff; font-family: 'EB Garamond', serif; font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,255,255,0.3);"></h1>
+        <p id="ending-narrative-display" style="color: #ccc; font-family: 'Noto Sans TC', sans-serif; font-size: 1.1rem; line-height: 2.2; letter-spacing: 4px; max-width: 700px; white-space: pre-wrap; font-style: italic;"></p>
+        <button onclick="location.reload()" style="margin-top: 60px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #888; padding: 10px 30px; cursor: pointer; letter-spacing: 6px; font-family: 'Courier New', monospace; text-transform: uppercase; transition: all 0.5s;">RESTART</button>
+    </div>
+
+    <!-- 音效完全由 game.js 的 SoundManager 控制 (Web Audio API) -->
 
     <div id="prologue-overlay" style="display: none;">
         <div id="skip-btn" onclick="skipPrologue()">SKIP >></div>
     </div>
 
     <script>
-        // 優化影片循環效果：減少結尾重置時的閃爍感
-        window.addEventListener('DOMContentLoaded', () => {
-            const video = document.getElementById('cover-video');
-            if (video) {
-                // 監控影片時間，在快結束前 0.5 秒開始淡出
-                video.addEventListener('timeupdate', function() {
-                    const buffer = 0.5;
-                    if (video.duration - video.currentTime < buffer) {
-                        video.style.opacity = '0';
-                        video.style.transition = 'opacity 0.5s ease';
-                    } else if (video.currentTime < buffer) {
-                        video.style.opacity = '1';
-                    }
-                });
+        // ── 開場動畫序列與音效自動化邏輯 ──
+        window.audioUnlocked = false;
+        window.introFinished = false;
 
-                // 影片結束時瞬間回到開頭並重新播放，同時恢復透明度
-                video.onended = function() {
-                    video.currentTime = 0.1; // 避開可能存在的檔案頭部空白
-                    video.play();
-                    video.style.opacity = '1';
-                };
+        function enterDream() {
+            const entry = document.getElementById('pre-entry');
+            const video = document.getElementById('cover-video');
+            
+            // 1. 隱藏入口
+            entry.style.opacity = '0';
+            setTimeout(() => entry.style.display = 'none', 2000);
+
+            // 2. 解鎖音訊並開始播放雨聲 (在 1.0 播放時就有雨聲)
+            window.audioUnlocked = true;
+            if (typeof SoundManager !== 'undefined') {
+                if (!window.soundManager) window.soundManager = new SoundManager();
+                window.soundManager.startRain();
+                // 如果你希望 1.0 時也有音樂，可以取消註解下一行
+                // window.soundManager.playBGM('intro');
             }
-        });
+
+            // 3. 啟動 1.0 影片 (解除 muted 雖然不一定成功，但雨聲已由 SoundManager 播放)
+            video.play();
+        }
+
+        const video = document.getElementById('cover-video');
+        if (video) {
+            video.onended = function() {
+                console.log("1.0 Animation finished -> Transitioning to 2.0 Loop");
+                video.src = "assets/2.0.mp4";
+                video.loop = true;
+                video.play();
+                window.introFinished = true;
+                
+                // 進入 2.0 循環後，播放標題音樂
+                if (window.audioUnlocked) {
+                    if (typeof SoundManager !== 'undefined') {
+                        if (!window.soundManager) window.soundManager = new SoundManager();
+                        window.soundManager.playBGM('intro');
+                    }
+                }
+
+                // 顯現標題與按鈕
+                const titleContainer = document.getElementById('title-container');
+                if (titleContainer) {
+                    titleContainer.style.opacity = '1';
+                    titleContainer.style.pointerEvents = 'auto';
+                }
+            };
+        }
     </script>
     <!-- 工程監控面板 (Debug Panel) -->
     <div id="debug-toggle" onclick="toggleDebug()">⚙️ ENGINE INFO</div>

@@ -47,6 +47,7 @@ body {
     background: #000;
     z-index: 200;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     color: #eee;
@@ -108,21 +109,27 @@ body {
 #overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: #000;
+    background: #000; /* 防止閃爍，背景設為純黑 */
     z-index: 100;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    transition: opacity 1.5s ease;
+    transition: opacity 2.5s ease;
 }
 
-#overlay img {
-    mask-image: radial-gradient(circle, black 50%, transparent 100%);
-    filter: contrast(1.5) grayscale(1) brightness(0.7);
-    margin-bottom: 20px;
-    width: 50% !important;
-    max-width: 500px;
+#game-container {
+    display: none !important; /* 強制初始隱藏 */
+}
+
+#overlay img.cover-bg {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    z-index: -1; /* 放在文字後面 */
+    filter: brightness(0.35) contrast(1.1) grayscale(0.1);
 }
 
 /* 墨跡化標題樣式 */
@@ -279,31 +286,50 @@ body {
     #scene-container { max-height: 45vh; }
 }
 
-/* 核心圖片容器 - 強制 16:9 電影比例 */
+/* 核心圖片容器 — Cinema 全屏模式
+   實際寬高由 HTML inline style 的 flex:1 / max-height:none 控制
+   這裡只設定外觀設定，不覆寫已知的 inline style */
 #scene-container {
-    width: 85%; /* 等比例縮小寬度 */
-    margin: 0 auto 1.5rem auto; /* 靠上、置中，增加下方間距 */
-    flex-shrink: 0; /* 禁止被壓縮 */
-    aspect-ratio: 16 / 9; /* 鎖定 16:9 比例 */
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: relative;
     background: #000;
-    border: 1px solid #1a1a1a;
     overflow: hidden;
-    max-height: 50vh; /* 限制最大高度 */
-    box-shadow: inset 0 0 50px rgba(0,0,0,0.9), 0 10px 30px rgba(0,0,0,0.5);
+    /* 筆記：不加 width / max-height / aspect-ratio —
+       它們已由 HTML flex:1 控制，避免衝突 */
 }
 
 #scene-image {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* 讓圖片填滿容器，確保 16:9 構圖震撼力 */
+    object-fit: cover;
+    object-position: center center;
     display: block;
-    filter: contrast(1.1) grayscale(1) brightness(0.85);
-    transition: opacity 1s;
+    /* scale(1.1): 微幅放大裁去 Imagen 圖片的白邊
+       現在 CSS 已移除 aspect-ratio 衝突，不會再讓圖片看起來像 1:1 */
+    transform: scale(1.1);
+    transform-origin: center center;
+    filter: contrast(1.1) grayscale(1) brightness(0.85) blur(0px);
+    transition: opacity 1.2s ease, filter 1.2s ease;
     z-index: 1;
+}
+
+/* ── 白邊保險層：雙重防護（scale+漸層），覆蓋至 28% ── */
+#scene-container::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to right,
+        rgba(0,0,0,0.95) 0%,
+        rgba(0,0,0,0.60) 12%,
+        rgba(0,0,0,0.15) 22%,
+        transparent      28%,
+        transparent      72%,
+        rgba(0,0,0,0.15) 78%,
+        rgba(0,0,0,0.60) 88%,
+        rgba(0,0,0,0.95) 100%
+    );
+    pointer-events: none;
+    z-index: 3;
 }
 
 /* 監視器標示 */
