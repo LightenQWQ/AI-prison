@@ -106,7 +106,8 @@ class WaveformEngine {
 
     updatePhysiology() {
         this.offset++;
-        const bpm = 60 + (gameState.fear * 1.2);
+        // 固定心跳與腦波節奏，不再隨 fear/trust 變動，僅作為純視覺裝飾
+        const bpm = 72; 
         const interval = (60 / bpm) * 60;
         let val = this.height / 2;
         if (this.offset % Math.floor(interval) === 0) {
@@ -117,15 +118,9 @@ class WaveformEngine {
         this.ecgPath.shift();
         this.ecgPath.push(val + (Math.random() * 2 - 1));
         
-        const chaos = 10 - (gameState.trust / 15);
-        const eegVal = (this.height / 2) + (Math.sin(this.offset * 0.2) * 5) + (Math.random() * chaos);
+        const eegVal = (this.height / 2) + (Math.sin(this.offset * 0.2) * 5) + (Math.random() * 5);
         this.eegPath.shift();
         this.eegPath.push(eegVal);
-        
-        const hrEl = document.getElementById('hr-value');
-        const syncEl = document.getElementById('sync-value');
-        if (hrEl) hrEl.innerText = Math.floor(bpm);
-        if (syncEl) syncEl.innerText = Math.floor(gameState.trust);
     }
 
     drawWave(ctx, path, color, width) {
@@ -309,6 +304,34 @@ window.onload = () => {
     rainEngine = new RainEngine('rain-canvas');
 };
 
+async function quickStart() {
+    console.log("DEBUG: Quick starting game...");
+    const entry = document.getElementById('pre-entry');
+    const overlay = document.getElementById('overlay');
+    const gameContainer = document.getElementById('game-container');
+    
+    entry.style.display = 'none';
+    overlay.style.display = 'none';
+    gameContainer.style.setProperty('display', 'flex', 'important');
+    
+    if (!window.soundManager) window.soundManager = new SoundManager();
+    soundManager = window.soundManager;
+    if (soundManager.audioCtx.state === 'suspended') soundManager.audioCtx.resume();
+    
+    soundManager.startRain();
+    soundManager.playBGM('game');
+    
+    waveEngine = new WaveformEngine();
+    document.getElementById('scene-image').style.display = 'block';
+    document.getElementById('scene-image').style.opacity = '1';
+    
+    updateUI({
+        dialogue: "......",
+        narration: "（你直接跳入了這場永恆的雨夜。）",
+        image_url: "assets/cover_v3.png"
+    });
+}
+
 async function startGame() {
     isSkippingPrologue = false;
     
@@ -477,6 +500,7 @@ function updateUI(data) {
         
         setTimeout(() => {
             sceneImg.src = "data:image/png;base64," + data.image_b64;
+            sceneImg.classList.add("cinematic-animation");
             sceneImg.style.opacity = "1";
             sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)"; // 轉場結束：清晰
         }, 300);
@@ -487,6 +511,7 @@ function updateUI(data) {
         
         setTimeout(() => {
             sceneImg.src = data.image_url;
+            sceneImg.classList.add("cinematic-animation");
             sceneImg.style.opacity = "1";
             sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
         }, 100);
@@ -600,6 +625,22 @@ function updateDebugInfo(metadata) {
     document.getElementById('debug-status').innerText = hasError ? 'FAILED' : 'DONE';
     document.getElementById('debug-status').style.color = hasError ? '#ff4444' : '#00ff00';
 
+    // 更新進度與事件資訊 (Debug Panel)
+    const stageMap = {
+        0: "情感接觸",
+        1: "尋找電話亭",
+        2: "回憶號碼",
+        3: "撥通電話",
+        4: "前往公寓",
+        5: "開啟信箱",
+        6: "家門之前"
+    };
+    
+    if (gameState) {
+        document.getElementById('debug-progress').innerText = `${gameState.turn} 回合 | Stage ${gameState.puzzle_stage}`;
+        document.getElementById('debug-chapter').innerText = stageMap[gameState.puzzle_stage] || "未知";
+    }
+
     const errorEl = document.getElementById('debug-error');
     if (hasError) {
         errorEl.innerText = 'ERROR: ' + (v.error || t.error);
@@ -666,18 +707,39 @@ async function sendSuggestion() {
                     soundManager.playBGM('ending_good');
                 }
                 
-                // 顯示全螢幕結局畫面
+                // 顯示全螢幕結局畫面（4秒後切入，讓玩家先看最後一張圖）
                 setTimeout(() => {
                     const endScreen = document.getElementById('ending-screen');
                     const titleEl = document.getElementById('ending-title-display');
                     const narrativeEl = document.getElementById('ending-narrative-display');
+                    const retroWrap = document.getElementById('ending-retrospective-wrap');
+                    const retroDivider = document.getElementById('retro-divider');
+                    const retroEl = document.getElementById('ending-retrospective-display');
                     
-                    titleEl.innerText = data.ending_title || "【結局】";
-                    narrativeEl.innerText = data.ending_narrative || "雨不停歇。這座城市將再次歸於沉默。";
+                    titleEl.innerText = data.ending_title || '【結局】';
+                    narrativeEl.innerText = data.ending_narrative || '雨不停歇。這座城市將再次歸於沉默。';
                     
                     endScreen.style.display = 'flex';
-                    // 觸發漸入動畫
                     setTimeout(() => endScreen.style.opacity = '1', 50);
+
+                    // 心境回顧：打字機效果，延遲出現
+                    const retroText = data.ending_retrospective || '';
+                    if (retroText) {
+                        setTimeout(() => {
+                            retroDivider.style.display = 'flex';
+                            retroWrap.style.display = 'block';
+                            retroEl.innerText = '';
+                            let i = 0;
+                            const typeInterval = setInterval(() => {
+                                if (i < retroText.length) {
+                                    retroEl.innerText += retroText[i];
+                                    i++;
+                                } else {
+                                    clearInterval(typeInterval);
+                                }
+                            }, 40);
+                        }, 3500); // 結局文字顯示3.5秒後才出現內心獨白
+                    }
                 }, 4000); // 讓玩家先看最後一張圖 4 秒再切入結局
             }
 

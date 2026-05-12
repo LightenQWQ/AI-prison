@@ -22,3 +22,5 @@ config/secrets/
 *.json
 !package.json
 !package-lock.json
+*.log
+

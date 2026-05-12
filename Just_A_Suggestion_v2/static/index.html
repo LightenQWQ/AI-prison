@@ -74,14 +74,19 @@
         background: #000; display: flex; align-items: center; justify-content: center;
         transition: opacity 2s ease-in-out;
     ">
-        <button onclick="enterDream()" style="
-            background: transparent; border: 1px solid rgba(255,255,255,0.2);
-            color: #888; padding: 15px 40px; cursor: pointer;
-            letter-spacing: 10px; font-family: 'EB Garamond', serif;
-            font-size: 1.2rem; transition: all 0.8s;
-        " onmouseover="this.style.color='#fff'; this.style.borderColor='#fff';" onmouseout="this.style.color='#888'; this.style.borderColor='rgba(255,255,255,0.2)';">
-            [ 進入夢境 ]
-        </button>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <button onclick="enterDream()" style="
+                background: transparent; border: 1px solid rgba(255,255,255,0.2);
+                color: #888; padding: 15px 40px; cursor: pointer;
+                letter-spacing: 10px; font-family: 'EB Garamond', serif;
+                font-size: 1.2rem; transition: all 0.8s;
+            " onmouseover="this.style.color='#fff'; this.style.borderColor='#fff';" onmouseout="this.style.color='#888'; this.style.borderColor='rgba(255,255,255,0.2)';">
+                [ 進入夢境 ]
+            </button>
+            <div onclick="quickStart()" style="color: rgba(255,255,255,0.2); font-family: 'Courier New', monospace; font-size: 0.6rem; letter-spacing: 3px; cursor: pointer;" onmouseover="this.style.color='rgba(255,255,255,0.5)';" onmouseout="this.style.color='rgba(255,255,255,0.2)';">
+                DEBUG: SKIP INTRO & START
+            </div>
+        </div>
     </div>
 
     <div id="overlay">
@@ -165,11 +170,11 @@
         <!-- 儀表板改為隱藏狀態，保留 DOM 供 JS 更新數據，但不再顯示 -->
         <header id="monitor-dashboard" style="display: none;"></header>
 
-        <div id="scene-container" style="flex: 1; border: none; margin: 0; max-height: none; background: #000; position: relative;">
+        <div id="scene-container" style="flex: 1; width: 100%; border: none; margin: 0; max-height: none; background: #000; position: relative;">
             <!-- 移除 OSD 條 -->
             <div id="monitor-osd-bar" style="display: none;"></div>
             
-            <img id="scene-image" src="" alt="Game Scene" style="filter: contrast(1.1) brightness(0.9); object-fit: cover; width: 100%; height: 100%;">
+            <img id="scene-image" src="" alt="Game Scene" style="filter: grayscale(1) contrast(1.1) brightness(0.9); object-fit: contain; width: 100%; height: 100%; transition: filter 1.5s ease-in-out, opacity 1.5s ease-in-out;">
             <div id="memory-fragment"></div>
             <div class="vignette" style="background: radial-gradient(ellipse, transparent 50%, rgba(0,0,0,0.7) 100%);"></div>
             <div id="noise-layer"></div>
@@ -226,12 +231,87 @@
         background: #000; z-index: 9999; display: none; 
         flex-direction: column; align-items: center; justify-content: center;
         opacity: 0; transition: opacity 3s ease-in-out;
-        padding: 40px; box-sizing: border-box; text-align: center;
+        padding: 0; box-sizing: border-box; overflow-y: auto;
     ">
-        <h1 id="ending-title-display" style="color: #fff; font-family: 'EB Garamond', serif; font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,255,255,0.3);"></h1>
-        <p id="ending-narrative-display" style="color: #ccc; font-family: 'Noto Sans TC', sans-serif; font-size: 1.1rem; line-height: 2.2; letter-spacing: 4px; max-width: 700px; white-space: pre-wrap; font-style: italic;"></p>
-        <button onclick="location.reload()" style="margin-top: 60px; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #888; padding: 10px 30px; cursor: pointer; letter-spacing: 6px; font-family: 'Courier New', monospace; text-transform: uppercase; transition: all 0.5s;">RESTART</button>
+        <!-- 背景雨絲效果 -->
+        <div style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;opacity:0.15;">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs><filter id="rain"><feTurbulence type="turbulence" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/><feDisplacementMap in="SourceGraphic" scale="5"/></filter></defs>
+                <rect width="100%" height="100%" fill="none"/>
+            </svg>
+        </div>
+
+        <div style="max-width:720px; width:90%; padding:80px 40px; text-align:center; position:relative;">
+            
+            <!-- 裝飾線 -->
+            <div style="width:1px; height:60px; background:linear-gradient(transparent,rgba(255,255,255,0.3)); margin:0 auto 30px;"></div>
+            
+            <!-- 結局標題 -->
+            <h1 id="ending-title-display" style="
+                color: #fff; 
+                font-family: 'EB Garamond', 'Noto Serif TC', serif; 
+                font-size: clamp(1.6rem, 3vw, 2.4rem); 
+                letter-spacing: 8px; 
+                margin-bottom: 40px; 
+                text-shadow: 0 0 40px rgba(255,255,255,0.2);
+                font-weight: 400;
+            "></h1>
+            
+            <!-- 詩意結局文字 -->
+            <p id="ending-narrative-display" style="
+                color: #aaa; 
+                font-family: 'Noto Serif TC', serif; 
+                font-size: 1.05rem; 
+                line-height: 2.4; 
+                letter-spacing: 3px; 
+                white-space: pre-wrap; 
+                font-style: italic;
+                margin-bottom: 60px;
+            "></p>
+
+            <!-- 分隔線 -->
+            <div id="retro-divider" style="display:none; align-items:center; gap:20px; margin-bottom:40px;">
+                <div style="flex:1;height:1px;background:linear-gradient(transparent,rgba(255,255,255,0.15),transparent);"></div>
+                <span style="color:rgba(255,255,255,0.25);font-family:'Courier New';font-size:0.7rem;letter-spacing:4px;">INNER VOICE</span>
+                <div style="flex:1;height:1px;background:linear-gradient(transparent,rgba(255,255,255,0.15),transparent);"></div>
+            </div>
+
+            <!-- 主角心境回顧 -->
+            <div id="ending-retrospective-wrap" style="display:none; text-align:left; background:rgba(255,255,255,0.03); border-left:2px solid rgba(255,255,255,0.1); padding:30px 30px 30px 30px; margin-bottom:60px; border-radius:0 4px 4px 0;">
+                <div style="color:rgba(255,255,255,0.3);font-family:'Courier New';font-size:0.65rem;letter-spacing:5px;margin-bottom:16px;">— 主角的內心聲音 —</div>
+                <p id="ending-retrospective-display" style="
+                    color: #c8b89a; 
+                    font-family: 'Noto Serif TC', serif; 
+                    font-size: 0.95rem; 
+                    line-height: 2.2; 
+                    letter-spacing: 1px; 
+                    white-space: pre-wrap;
+                    font-style: italic;
+                    margin:0;
+                "></p>
+            </div>
+
+            <!-- 裝飾線 -->
+            <div style="width:1px; height:40px; background:linear-gradient(rgba(255,255,255,0.2),transparent); margin:0 auto 40px;"></div>
+
+            <button onclick="location.reload()" style="
+                background: transparent; 
+                border: 1px solid rgba(255,255,255,0.15); 
+                color: rgba(255,255,255,0.4); 
+                padding: 12px 40px; 
+                cursor: pointer; 
+                letter-spacing: 8px; 
+                font-family: 'Courier New', monospace; 
+                font-size: 0.7rem;
+                text-transform: uppercase; 
+                transition: all 0.5s;
+            " onmouseover="this.style.borderColor='rgba(255,255,255,0.4)';this.style.color='rgba(255,255,255,0.8)'" 
+               onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.color='rgba(255,255,255,0.4)'">
+                RESTART
+            </button>
+        </div>
     </div>
+
 
     <!-- 音效完全由 game.js 的 SoundManager 控制 (Web Audio API) -->
 
@@ -243,6 +323,32 @@
         // ── 開場動畫序列與音效自動化邏輯 ──
         window.audioUnlocked = false;
         window.introFinished = false;
+
+        function updateDebugUI(hasError, gameState) {
+            document.getElementById('debug-status').innerText = hasError ? 'FAILED' : 'DONE';
+            document.getElementById('debug-status').style.color = hasError ? '#ff4444' : '#00ff00';
+
+            // 更新進度與事件資訊
+            const stageMap = {
+                0: "情感接觸",
+                1: "尋找電話亭",
+                2: "回憶號碼",
+                3: "撥通電話",
+                4: "前往公寓",
+                5: "開啟信箱",
+                6: "家門之前"
+            };
+            
+            if (gameState) {
+                document.getElementById('debug-progress').innerText = `${gameState.turn} 回合 | Stage ${gameState.puzzle_stage}`;
+                document.getElementById('debug-chapter').innerText = stageMap[gameState.puzzle_stage] || "未知";
+                
+                const eventInfo = gameState.active_event && gameState.active_event.name 
+                    ? `${gameState.active_event.name} (${gameState.active_event.desc})` 
+                    : "尚未觸發";
+                document.getElementById('debug-event').innerText = eventInfo;
+            }
+        }
 
         function enterDream() {
             const entry = document.getElementById('pre-entry');
@@ -292,14 +398,18 @@
         }
     </script>
     <!-- 工程監控面板 (Debug Panel) -->
-    <div id="debug-toggle" onclick="toggleDebug()">⚙️ ENGINE INFO</div>
+    <div id="debug-toggle" onclick="toggleDebug()">📜 NARRATIVE LOG</div>
     <div id="debug-panel">
-        <h3>ENGINE MONITOR v27.2</h3>
+        <h3>NARRATIVE LOG & MONITOR</h3>
+        <div class="debug-item"><span>PROGRESS:</span> <span id="debug-progress">1/6</span></div>
+        <div class="debug-item"><span>CHAPTER:</span> <span id="debug-chapter">情感接觸</span></div>
+        <hr>
+        <div class="debug-item"><span>SYSTEM STATUS:</span></div>
         <div class="debug-item"><span>MODEL:</span> <span id="debug-model">-</span></div>
         <div class="debug-item"><span>LATENCY:</span> <span id="debug-latency">-</span>s</div>
-        <div class="debug-item"><span>STATUS:</span> <span id="debug-status">IDLE</span></div>
+        <div class="debug-item"><span>HEALTH:</span> <span id="debug-status">IDLE</span></div>
         <hr>
-        <div class="debug-item"><span>FINAL PROMPT:</span></div>
+        <div class="debug-item"><span>LAST IMAGEN PROMPT:</span></div>
         <div id="debug-prompt">Waiting for input...</div>
         <div id="debug-error" style="color: #ff4444; margin-top: 10px; font-size: 10px; display: none;"></div>
     </div>

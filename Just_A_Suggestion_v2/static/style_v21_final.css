@@ -307,7 +307,7 @@ body {
        現在 CSS 已移除 aspect-ratio 衝突，不會再讓圖片看起來像 1:1 */
     transform: scale(1.1);
     transform-origin: center center;
-    filter: contrast(1.1) grayscale(1) brightness(0.85) blur(0px);
+    filter: grayscale(1) contrast(1.1) grayscale(1) brightness(0.85) blur(0px);
     transition: opacity 1.2s ease, filter 1.2s ease;
     z-index: 1;
 }
@@ -503,4 +503,12 @@ hr {
     border: none;
     border-top: 1px solid #333;
     margin: 15px 0;
+}
+/* Cinematic Ken Burns Effect */
+@keyframes cinematic-pan-zoom {
+    0% { transform: scale(1.05) translate(0%, 0%); filter: grayscale(1) contrast(1.1) brightness(0.85); }
+    100% { transform: scale(1.15) translate(-2%, 1%); filter: grayscale(1) contrast(1.15) brightness(0.9); }
+}
+.cinematic-animation {
+    animation: cinematic-pan-zoom 20s ease-in-out infinite alternate;
 }
