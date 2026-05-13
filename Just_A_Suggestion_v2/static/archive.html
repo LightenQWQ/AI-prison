@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Archives | Just a Suggestion</title>
+    <link rel="stylesheet" href="style_v21_final.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #050505;
+            color: #d0d0d0;
+            overflow-x: hidden;
+            font-family: 'EB Garamond', 'Noto Sans TC', serif;
+        }
+        .header {
+            padding: 80px 20px 40px; /* 增加上方邊距，避免按鈕重疊 */
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            position: relative;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            margin: 0;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2);
+            color: #fff;
+        }
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.05); /* 稍微有點底色 */
+            border: 1px solid rgba(255,255,255,0.3); /* 邊框變明顯 */
+            color: #ccc; /* 文字變亮 */
+            padding: 12px 30px;
+            cursor: pointer;
+            letter-spacing: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            transition: all 0.4s ease;
+            text-decoration: none;
+            z-index: 100;
+        }
+        .back-btn:hover {
+            color: #fff;
+            border-color: #fff;
+            background: rgba(255,255,255,0.15);
+            box-shadow: 0 0 15px rgba(255,255,255,0.1);
+        }
+        .archive-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 80px;
+        }
+        .archive-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 40px;
+            position: relative;
+        }
+        .archive-item::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+        .archive-img {
+            width: 100%;
+            display: block;
+            margin-bottom: 30px;
+            filter: grayscale(1) contrast(1.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .archive-title {
+            font-size: 1.8rem;
+            color: #fff;
+            letter-spacing: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .archive-date {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+        .archive-narrative {
+            font-style: italic;
+            line-height: 2.2;
+            color: #aaa;
+            text-align: center;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+            white-space: pre-wrap;
+        }
+        .archive-retro {
+            background: rgba(0,0,0,0.5);
+            border-left: 2px solid rgba(255,255,255,0.2);
+            padding: 20px;
+            font-size: 0.95rem;
+            color: #c8b89a;
+            line-height: 2.2;
+            margin-bottom: 30px;
+            white-space: pre-wrap;
+        }
+        .history-toggle {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: transparent;
+            border: 1px dashed rgba(255,255,255,0.2);
+            color: #888;
+            padding: 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+        }
+        .history-toggle:hover {
+            color: #fff;
+            border-color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.05);
+        }
+        .history-content {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.05);
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .history-turn {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .history-turn:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .hist-user {
+            color: #88cc88;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .hist-user::before {
+            content: "> ";
+            color: #555;
+        }
+        .hist-dialogue {
+            color: #fff;
+            font-style: italic;
+            margin-bottom: 10px;
+            line-height: 1.8;
+            font-size: 1.1rem;
+        }
+        .hist-narrative {
+            color: #777;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="back-btn"><< RETURN</a>
+        <h1>THE ARCHIVES</h1>
+        <div style="color:#666; margin-top:15px; letter-spacing:4px; font-size:0.8rem;">RECORDS OF THE RAIN</div>
+    </div>
+
+    <div class="archive-container" id="archive-list">
+        <div style="text-align:center; color:#666; margin-top:100px; letter-spacing:3px;">
+            LOADING RECORDS...
+        </div>
+    </div>
+
+    <script src="archive.js"></script>
+</body>
+</html>
