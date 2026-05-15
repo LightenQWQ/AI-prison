@@ -1,0 +1,99 @@
+摘要
+　　本研究以《只是一個建議》為題，探討生成式人工智慧於互動解謎遊戲創作中的應用與可能性。生成式AI的發展使遊戲不再受限於固定腳本，而能根據玩家輸入動態生成敘事內容、角色反應與視覺畫面。本研究以Unity為開發平台，整合大型語言模型（Large Language Model, LLM）、文字轉語音技術（Text-to-Speech, TTS）與圖像生成模型（Text-to-Image Models），建構一個由玩家以文字提出建議，而角色具有自主判斷能力的互動式逃脫遊戲系統。
+　　在《只是一個建議》中，玩家並非傳統遊戲的行動者，而是以指引者的身分與被困在房間中的角色互動。玩家透過文字輸入提供建議或指令，而角色會根據其情緒狀態、信任程度與AI模型推論結果，選擇是否接受、部分採納，或完全不照做。此一反向互動設計使玩家必須理解角色情緒，透過安撫、鼓勵或合理推理，引導角色逐步解開房間中的謎題。角色的行動結果與場景變化將透過AI生成的漫畫式分鏡呈現，使每位玩家皆能獲得獨特的遊戲體驗。
+關鍵詞：生成式人工智慧、互動敘事、遊戲創作、AI漫畫生成、解謎遊戲
+Abstract
+　　This thesis, titled Just a Suggestion, explores the application and creative potential of generative artificial intelligence in the development of interactive puzzle games. Recent advancements in generative AI have enabled games to move beyond fixed narratives, allowing dynamic generation of storylines, character reactions, and visual representations based on player input. Utilizing Unity as the primary development platform, this study integrates Large Language Model(LLM), text-to-speech（TTS）technology, and text-to-image generative models to construct an interactive escape-room system in which players provide suggestions through text, while the AI-controlled character autonomously decides how to act.
+　　In Just a Suggestion, the player does not assume the role of the protagonist. Instead, the player becomes a “guide,” communicating with a character trapped inside a room. The character’s decisions—whether to follow, partially follow, or reject the player’s suggestion—are influenced by its emotional state, trust level, and AI-driven behavior analysis. This reversed interaction mechanism requires players to understand the character’s psychological condition and use comfort, encouragement, or logical reasoning to guide them toward solving the puzzles. The character’s actions and environmental changes are presented through AI-generated comic-style panels, ensuring that each playthrough results in a unique, personalized experience.
+Keywords：Generative Artificial Intelligence, Interactive Narrative, Game Creation, AI Comic Generation, Puzzle Game 
+目錄
+摘要	I
+Abstract	II
+目錄	III
+表目錄	V
+圖目錄	VI
+第一章、緒論	1
+第一節、創作研究動機	1
+第二節、創作研究目的	2
+第三節、創作研究範圍與限制	3
+一、創作研究範圍	3
+二、創作研究限制	4
+第二章、文獻探討	5
+第一節、生成式人工智慧於遊戲領域之應用	5
+一、生成式AI技術發展	5
+二、AI在遊戲內容生成之研究	7
+第二節、AI輔助之遊戲創作流程	8
+一、人機協作之理論模式	8
+二、生成式工作流（Generative Workflow）之階段應用	9
+三、提示工程（Prompt Engineering）與控制策略	10
+第三節、互動敘事與解謎遊戲設計理論	10
+一、互動敘事與玩家能動性	10
+二、解謎機制之理論	11
+第四節、視覺風格與美學基礎	12
+一、簡化與擴增：Scott McCloud的漫畫符號學	12
+二、光影敘事：黑色電影（Film Noir）表現主義	12
+第五節、AI相關遊戲案例分析	15
+一、《AI Dungeon》	15
+二、《Whispers from the Star》	17
+三、《Who's Lila?》	19
+四、小節	22
+第三章、創作理念與系統設計	24
+第一節、創作理念與核心設計決策	24
+一、「指引」取代「控制」的互動機制	24
+二、以「簡化」強化心理投射的視覺風格	24
+三、基於機器學習的動態敘事生成	24
+第二節、遊戲運作流程	25
+一、玩家輸入與意圖解析	25
+二、數值檢定與行為決策	25
+三、內容生成	26
+第三節、創作內容與方法	28
+一、故事腳本與情境設定	28
+二、互動敘事方法	28
+第四節、角色和場景設計	29
+一、角色設計	29
+二、場景設計	30
+第五節、創作工具與技術架構	32
+一、以Unity為主要開發平台	32
+二、AI Toolbox：語言生成、敘事控制與圖片生成整合	32
+三、互動式AI敘事系統的整體架構	33
+第六節、遊戲製作流程與開發規劃	34
+一、前置規劃階段（第1–2個月）	34
+二、模型訓練與系統開發階段（第3–4個月）	34
+三、整合與優化階段（第5–6個月）	34
+參考文獻	36
+表目錄
+表1　PCG與PCG via ML之差異比較	8
+表2　上述三款遊戲案例比較分析表	22
+表3　遊戲開發時程甘特圖	35
+圖目錄
+圖1　生成式AI模組架構示意圖	6
+圖2　黑色電影與德國表現主義的範例	13
+圖3　角色心理情緒示例圖	13
+圖4　高反差的黑白場景示例圖	14
+圖5　《AI Dungeon》主視覺	15
+圖6　《AI Dungeon》實機畫面	17
+圖7　《Whispers from the Star》主視覺	18
+圖8　《Whispers from the Star》實機畫面	19
+圖9　《Who's Lila?》主視覺	20
+圖10　《Who's Lila?》實機畫面	21
+圖11　遊戲畫面測試圖	25
+圖12　遊戲流程圖	27
+圖13　角色風格示意圖	30
+圖14　場景風格測試圖	31
+圖15　場景風格測試圖	31
+圖16　開發流程架構圖	35
+第一章、緒論
+第一節、創作研究動機
+　　近年來，生成式人工智慧（Generative Artificial Intelligence），以下簡稱生成式AI，從文本生成、語音合成到圖像生成，皆展現出突破性的創作能力。人工智慧不再只是輔助工具，而逐漸成為創作流程的一部分，使內容產生方式從過去的人工編排轉向人機共創。在此技術背景下，遊戲不再受限於固定情節與角色行為，而能夠根據玩家輸入即時生成動態故事，形塑具有高度互動性與不可預期性的敘事體驗。這樣的變化促使筆者開始思考：如果遊戲中的角色可以擁有自主意志，而玩家的行為不再是直接控制，而是以建議、指引、協助的方式介入，那麼遊戲敘事是否會開拓出新的可能性？ 
+　　在一般遊戲設計中，玩家常被賦予主導角色的身份，而角色的行動會依照玩家的指令精準反應。然而，本研究所創作的遊戲《只是一個建議》希望反轉這一傳統結構：玩家並非直接操控角色，而是成為一個看不見的聲音，透過文字向角色提出建議，協助其逃離密閉空間。角色則擁有自主判斷能力，可能依照玩家的指示行動，也可能因恐懼、懷疑、叛逆或情緒不穩而拒絕採取行動。這種不確定性與角色情緒波動，使玩家必須學習理解角色、安撫情緒、建立信任，而非單純發出命令。其核心體驗不在於解謎本身，而是角色與玩家的關係如何影響解謎過程。
+　　筆者之所以想探索此主題，源自於對互動敘事與玩家角色定位的長期思考。在許多以敘事為導向的遊戲中，雖然角色會作出反應，但本質上仍可被視為程式化回應，缺乏真正的自主性。而《史丹利的寓言》等作品則提供了另一種觀點：透過打破第四面牆與敘事結構，遊戲得以呈現玩家與敘事者之間的張力。本研究希望以反向方式延伸此概念——讓玩家成為敘事者，而角色成為具有意志的個體。當角色不再單純聽從指令，而是具有自己的想法與感受時，玩家便必須重新思考交流、信任、引導等行為在遊戲中的意義。
+第二節、創作研究目的
+　　本研究旨在透過創作《只是一個建議》之互動解謎遊戲，探討生成式AI在遊戲敘事與互動媒介創作中的應用方式及其可能性。隨著大型語言模型（Large Language Model）、圖像生成模型（Text-to-Image Models）與語音合成技術的快速發展，遊戲中的角色不再是被動的程式化反應，而能夠以更具情緒性、自主性與不確定性的方式回應玩家行為。本研究以玩家給予建議、角色自主判斷回應為核心互動機制，旨在探索生成式AI所帶來的新敘事結構與創作模式。基於上述背景，本研究目的如下：
+1.建立一套結合生成式AI的互動式解謎遊戲系統
+　　本研究希望建置一個整合大型語言模型、AI漫畫分鏡生成與語音合成技術的遊戲框架，使系統能根據玩家輸入的自然語言即時生成角色回應、環境變化及敘事畫面。此系統旨在驗證生成式AI在遊戲創作中的可行性，以及探討其作為創作工具時所能提供的敘事與表現能力。
+2.探索玩家建議驅動下的角色自主行為與敘事變化
+　　傳統解謎遊戲多由玩家直接操控角色，但本研究反轉角色定位，將玩家設定為建議者而非操控者，使遊戲角色擁有自主判斷能力。本研究目的是觀察並分析角色如何在AI驅動下依其情緒狀態、信任程度與對玩家語氣判斷，選擇是否接受玩家建議，進而形成不同的互動敘事曲線。
+3.探討AI生成漫畫式視覺分鏡在遊戲敘事中的表現方式
+　　本研究將AI生成圖像應用於遊戲視覺呈現，採用漫畫分鏡形式展現角色行動與敘事推進。目的在於研究生成式圖像如何作為即時敘事媒介，並分析其在互動遊戲中的沉浸感、敘事清晰度與視覺一致性，以及其對遊戲體驗的影響。
+4.驗證人機協作敘事（Human-AI Collaborative Storytelling）在遊戲創作中的可行性
+　　本研究引用Riedl與Bulitko(2013)對於互動敘事系統的定義旨在探討玩家與AI角色之間的互動如何共同塑造敘事成果，包含解謎過程、場景變化與最終結局。藉由比較不同玩家互動方式所生成的差異內容，本研究希望驗證生成式AI是否能支持具高度變異性、動態生成與個人化特質的敘事形式，並進一步思考其在未來新媒體藝術創作中的應用潛力。

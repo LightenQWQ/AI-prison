@@ -1,63 +1,40 @@
+let currentArchives = [];
+
 document.addEventListener('DOMContentLoaded', async () => {
     const listContainer = document.getElementById('archive-list');
     
     try {
         const response = await fetch('/api/archives');
-        const archives = await response.json();
+        currentArchives = await response.json();
         
-        if (!archives || archives.length === 0) {
+        if (!currentArchives || currentArchives.length === 0) {
             listContainer.innerHTML = '<div style="text-align:center; color:#666; margin-top:100px; letter-spacing:3px;">NO RECORDS FOUND.</div>';
             return;
         }
 
         listContainer.innerHTML = '';
         
-        archives.forEach((record, index) => {
+        currentArchives.forEach((record, index) => {
             const dateStr = new Date(record.timestamp).toLocaleString('zh-TW', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute:'2-digit'
+                year: 'numeric', month: '2-digit', day: '2-digit'
             });
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'archive-item';
+            itemDiv.onclick = () => openDetail(index);
 
-            // 組合圖片
-            let imgHtml = '';
-            if (record.final_image_url) {
-                imgHtml = `<img src="${record.final_image_url}" class="archive-img" alt="Ending Image">`;
-            }
-
-            // 組合回顧文字
-            let retroHtml = '';
-            if (record.ending_retrospective) {
-                retroHtml = `<div class="archive-retro">${record.ending_retrospective}</div>`;
-            }
-
-            // 組合歷史對話
-            let historyHtml = '<div class="history-content" id="hist-' + index + '">';
-            if (record.history && record.history.length > 0) {
-                record.history.forEach(turn => {
-                    historyHtml += `
-                        <div class="history-turn">
-                            <div class="hist-user">${turn.user_suggestion || '...'}</div>
-                            ${turn.dialogue ? `<div class="hist-dialogue">${turn.dialogue}</div>` : ''}
-                            ${turn.narration ? `<div class="hist-narrative">${turn.narration}</div>` : ''}
-                        </div>
-                    `;
-                });
-            } else {
-                historyHtml += '<div style="color:#666; text-align:center;">No history recorded.</div>';
-            }
-            historyHtml += '</div>';
+            // 簡短摘要 (取前 60 字)
+            const summary = record.ending_narrative ? record.ending_narrative.substring(0, 60) + '...' : '一段未知的回憶...';
 
             itemDiv.innerHTML = `
-                ${imgHtml}
-                <div class="archive-title">${record.ending_title || '【結局】'}</div>
-                <div class="archive-date">${dateStr}</div>
-                <div class="archive-narrative">${record.ending_narrative || ''}</div>
-                ${retroHtml}
-                <button class="history-toggle" onclick="toggleHistory(${index})">[ VIEW FULL STORY ]</button>
-                ${historyHtml}
+                <div class="archive-thumb-wrap">
+                    <img src="${record.final_image_url || ''}" class="archive-thumb" alt="Ending">
+                </div>
+                <div class="archive-info">
+                    <div class="archive-title">${record.ending_title || '【未命名結局】'}</div>
+                    <div class="archive-meta">RECORDED ON ${dateStr}</div>
+                    <div class="archive-summary">${summary}</div>
+                </div>
             `;
 
             listContainer.appendChild(itemDiv);
@@ -69,11 +46,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function toggleHistory(index) {
-    const histDiv = document.getElementById('hist-' + index);
-    if (histDiv.style.display === 'block') {
-        histDiv.style.display = 'none';
-    } else {
-        histDiv.style.display = 'block';
+function openDetail(index) {
+    const record = currentArchives[index];
+    const modal = document.getElementById('modal-overlay');
+    const body = document.getElementById('modal-body');
+
+    // 格式化對話歷史
+    let historyHtml = '';
+    if (record.history && record.history.length > 0) {
+        record.history.forEach(turn => {
+            historyHtml += `
+                <div class="modal-turn">
+                    <div class="modal-turn-user">>> ${turn.user_suggestion || '...'}</div>
+                    ${turn.dialogue ? `<div class="modal-turn-dialogue">「${turn.dialogue}」</div>` : ''}
+                    ${turn.narration ? `<div class="modal-turn-narrative">${turn.narration}</div>` : ''}
+                </div>
+            `;
+        });
     }
+
+    body.innerHTML = `
+        <img src="${record.final_image_url || ''}" class="modal-img" alt="Final Shot">
+        <h2 class="modal-title">${record.ending_title || '【未命名結局】'}</h2>
+        <p class="modal-narrative">${record.ending_narrative || ''}</p>
+        
+        <div class="modal-retro-title">Protagonist's Inner Perspective</div>
+        <div class="modal-retro">${record.ending_retrospective || '在那場雨中，我什麼也沒留下。'}</div>
+
+        <div class="modal-history-title">THE FULL STORY ARC</div>
+        <div class="modal-history-list">
+            ${historyHtml}
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.style.opacity = '1';
+    }, 10);
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDetail(event) {
+    const modal = document.getElementById('modal-overlay');
+    modal.style.opacity = '0';
+    setTimeout(() => {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }, 400);
 }

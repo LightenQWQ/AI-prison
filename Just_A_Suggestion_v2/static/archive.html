@@ -4,173 +4,255 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Archives | Just a Suggestion</title>
+    <meta name="description" content="只是一個建議 — 封存所有階段的記憶與結局。">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌧</text></svg>">
     <link rel="stylesheet" href="style_v21_final.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
     <style>
         body {
-            background-color: #050505;
+            background-color: #010101;
             color: #d0d0d0;
+            overflow-y: auto !important;
             overflow-x: hidden;
             font-family: 'EB Garamond', 'Noto Sans TC', serif;
+            margin: 0;
+            padding: 0;
+            height: auto !important;
         }
+
         .header {
-            padding: 80px 20px 40px; /* 增加上方邊距，避免按鈕重疊 */
+            padding: 40px 20px;
             text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-            position: relative;
+            background: #000;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 30px;
         }
         .header h1 {
-            font-size: 2.5rem;
+            font-size: 2rem;
             letter-spacing: 12px;
             text-transform: uppercase;
             margin: 0;
-            text-shadow: 0 0 20px rgba(255,255,255,0.2);
             color: #fff;
         }
+        .header-sub {
+            color:#555; 
+            margin-top:10px; 
+            letter-spacing:5px; 
+            font-size:0.75rem;
+        }
+
         .back-btn {
             position: absolute;
             top: 30px;
             left: 30px;
-            background: rgba(255,255,255,0.05); /* 稍微有點底色 */
-            border: 1px solid rgba(255,255,255,0.3); /* 邊框變明顯 */
-            color: #ccc; /* 文字變亮 */
-            padding: 12px 30px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #666;
+            padding: 8px 15px;
             cursor: pointer;
-            letter-spacing: 4px;
+            letter-spacing: 3px;
             font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            transition: all 0.4s ease;
+            font-size: 0.75rem;
+            transition: all 0.3s;
             text-decoration: none;
-            z-index: 100;
         }
         .back-btn:hover {
             color: #fff;
             border-color: #fff;
-            background: rgba(255,255,255,0.15);
-            box-shadow: 0 0 15px rgba(255,255,255,0.1);
         }
+
         .archive-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 80px;
+            gap: 20px;
         }
+
+        /* 方框清單樣式 */
         .archive-item {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 40px;
-            position: relative;
-        }
-        .archive-item::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        }
-        .archive-img {
-            width: 100%;
-            display: block;
-            margin-bottom: 30px;
-            filter: grayscale(1) contrast(1.2);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .archive-title {
-            font-size: 1.8rem;
-            color: #fff;
-            letter-spacing: 6px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .archive-date {
-            font-family: 'Courier New', monospace;
-            font-size: 0.75rem;
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            letter-spacing: 2px;
-        }
-        .archive-narrative {
-            font-style: italic;
-            line-height: 2.2;
-            color: #aaa;
-            text-align: center;
-            margin-bottom: 30px;
-            letter-spacing: 2px;
-            white-space: pre-wrap;
-        }
-        .archive-retro {
-            background: rgba(0,0,0,0.5);
-            border-left: 2px solid rgba(255,255,255,0.2);
-            padding: 20px;
-            font-size: 0.95rem;
-            color: #c8b89a;
-            line-height: 2.2;
-            margin-bottom: 30px;
-            white-space: pre-wrap;
-        }
-        .history-toggle {
-            display: block;
-            width: 100%;
-            text-align: center;
-            background: transparent;
-            border: 1px dashed rgba(255,255,255,0.2);
-            color: #888;
-            padding: 15px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            letter-spacing: 4px;
-            transition: all 0.3s;
-        }
-        .history-toggle:hover {
-            color: #fff;
-            border-color: rgba(255,255,255,0.5);
-            background: rgba(255,255,255,0.05);
-        }
-        .history-content {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
+            display: flex;
             background: #0a0a0a;
             border: 1px solid rgba(255,255,255,0.05);
-            max-height: 500px;
-            overflow-y: auto;
+            padding: 15px;
+            gap: 25px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+            position: relative;
+            overflow: hidden;
         }
-        .history-turn {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+        .archive-item:hover {
+            background: #111;
+            border-color: rgba(255,255,255,0.2);
+            transform: translateX(10px);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
         }
-        .history-turn:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
+
+        .archive-thumb-wrap {
+            width: 240px;
+            height: 135px;
+            flex-shrink: 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .hist-user {
-            color: #88cc88;
-            margin-bottom: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
+        .archive-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(1) contrast(1.1);
+            transition: transform 0.6s, filter 0.6s;
         }
-        .hist-user::before {
-            content: "> ";
-            color: #555;
+        .archive-item:hover .archive-thumb {
+            transform: scale(1.05);
+            filter: grayscale(0.5) contrast(1.1);
         }
-        .hist-dialogue {
+
+        .archive-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .archive-title {
+            font-size: 1.4rem;
             color: #fff;
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+        .archive-meta {
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: #444;
+            margin-bottom: 12px;
+            letter-spacing: 2px;
+        }
+        .archive-summary {
+            font-size: 0.95rem;
+            color: #888;
+            line-height: 1.6;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-style: italic;
+        }
+
+        /* 詳情彈窗 (Modal) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.4s;
+            padding: 40px;
+        }
+        .modal-content {
+            width: 100%;
+            max-width: 1000px;
+            max-height: 90vh;
+            background: #050505;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 60px;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 0 100px rgba(0,0,0,1);
+        }
+        .close-modal {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            color: #444;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .close-modal:hover { color: #fff; }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .modal-img {
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            filter: grayscale(0.2) contrast(1.1);
+        }
+        .modal-title {
+            font-size: 2rem;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .modal-narrative {
+            font-size: 1.2rem;
+            line-height: 2;
+            color: #bbb;
+            margin-bottom: 40px;
+            font-style: italic;
+            white-space: pre-wrap;
+        }
+        .modal-retro-title {
+            color: #666;
+            letter-spacing: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        .modal-retro {
+            background: rgba(255,255,255,0.03);
+            border-left: 2px solid rgba(255,255,255,0.1);
+            padding: 30px;
+            color: #b0a080;
+            line-height: 2.2;
+            margin-bottom: 50px;
+            text-align: left;
+            width: 100%;
+            max-width: 800px;
+            white-space: pre-wrap;
+        }
+
+        .modal-history-title {
+            border-top: 1px solid rgba(255,255,255,0.05);
+            padding-top: 40px;
+            width: 100%;
+            color: #444;
+            letter-spacing: 5px;
+            margin-bottom: 30px;
+        }
+        .modal-history-list {
+            width: 100%;
+            max-width: 800px;
+            text-align: left;
+        }
+        .modal-turn {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+        .modal-turn-user {
+            color: #6a9c6a;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+        .modal-turn-dialogue {
+            color: #eee;
             font-style: italic;
             margin-bottom: 10px;
-            line-height: 1.8;
             font-size: 1.1rem;
         }
-        .hist-narrative {
-            color: #777;
+        .modal-turn-narrative {
+            color: #555;
             font-size: 0.9rem;
-            line-height: 1.6;
-            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -178,12 +260,23 @@
     <div class="header">
         <a href="/" class="back-btn"><< RETURN</a>
         <h1>THE ARCHIVES</h1>
-        <div style="color:#666; margin-top:15px; letter-spacing:4px; font-size:0.8rem;">RECORDS OF THE RAIN</div>
+        <div class="header-sub">RECORDS OF THE RAIN</div>
     </div>
 
     <div class="archive-container" id="archive-list">
+        <!-- 清單會由 archive.js 動態注入 -->
         <div style="text-align:center; color:#666; margin-top:100px; letter-spacing:3px;">
             LOADING RECORDS...
+        </div>
+    </div>
+
+    <!-- 詳情彈窗 -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeDetail(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="close-modal" onclick="closeDetail(event)">✕</div>
+            <div id="modal-body" class="modal-body">
+                <!-- 內容會由 archive.js 動態注入 -->
+            </div>
         </div>
     </div>
 

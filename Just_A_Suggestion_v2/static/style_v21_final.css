@@ -59,8 +59,8 @@ body {
 
 #skip-btn {
     position: absolute;
-    top: 30px;
-    right: 40px;
+    top: 65px;
+    right: 35px;
     font-size: 0.8rem;
     color: #444;
     letter-spacing: 2px;
@@ -511,4 +511,10 @@ hr {
 }
 .cinematic-animation {
     animation: cinematic-pan-zoom 20s ease-in-out infinite alternate;
+}
+
+/* Quest HUD 進行中圓點脈動 */
+@keyframes questPulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.9); }
+    50% { opacity: 0.8; transform: scale(1.1); box-shadow: 0 0 8px rgba(255,255,255,0.5); }
 }
