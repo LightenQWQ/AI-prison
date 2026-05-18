@@ -597,10 +597,7 @@ function updateUI(data) {
         showMemoryFragment(data.memory_fragment);
     }
 
-    // 線索發現：在旁白區展示
-    if (data.clue_found) {
-        narratorEl.innerText += `  │  🔍 線索：${data.clue_found}`;
-    }
+    // 線索發現：已依指示移除 UI 顯示
 
     if (data.metadata) {
         updateDebugInfo(data.metadata);

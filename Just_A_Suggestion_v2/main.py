@@ -19,6 +19,25 @@ from google.genai import types
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# ============================================================
+# 📁 永久資料目錄 — 獨立於部署目錄之外，永不被覆蓋
+# 本地開發：存在 ./data/ (相對路徑，方便)
+# 雲端伺服器：存在 /home/lightenywy/game_data/（與部署目錄完全分離）
+# ============================================================
+_IS_CLOUD = os.path.exists("/home/lightenywy")  # 偵測是否在雲端 GCP VM 上
+if _IS_CLOUD:
+    PERSISTENT_DATA_DIR = "/home/lightenywy/game_data"
+else:
+    PERSISTENT_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
+RUNS_DIR = os.path.join(PERSISTENT_DATA_DIR, "runs")
+ARCHIVE_IMAGES_DIR = os.path.join(PERSISTENT_DATA_DIR, "archive_images")
+
+# 啟動時自動建立目錄（幂等操作，安全）
+os.makedirs(RUNS_DIR, exist_ok=True)
+os.makedirs(ARCHIVE_IMAGES_DIR, exist_ok=True)
+print(f"[DATA] 永久資料目錄: {PERSISTENT_DATA_DIR}")
+
 # 注意：主要的 AI 客戶端在 build_image_prompt 下方初始化
 # client_vertex（影像）與 client_studio（語言）分別處理不同任務
 
@@ -190,10 +209,6 @@ CAMERA_ANGLES = {
         "No facial details, no body details, just a sharp black ink silhouette. "
         "Dramatic lighting from behind. High contrast monochrome.",
 
-    "puddle_reflection":
-        "GROUND LEVEL PUDDLE REFLECTION. Looking at the distorted reflection of the figure in a dark water puddle. "
-        "The face in the reflection is broken by ripples and ink bleeding, making it unidentifiable. "
-        "Dark surreal atmospheric art.",
 
     "extreme_wide":
         "CINEMATIC EXTREME WIDE SHOT. Figure is a tiny black speck in the distance of a massive, oppressive alleyway. "
@@ -201,9 +216,10 @@ CAMERA_ANGLES = {
         "No detail on the figure possible at this distance.",
 
     "item_closeup":
-        "PURE MACRO FOCUS ON OBJECT. The object is the absolute center of the frame. "
-        "No hands, no people, no characters visible. "
-        "Intense focus on the object's texture, surface details, and ink-wash gradients.",
+        "OVERHEAD TOP-DOWN MACRO SHOT. Looking straight down at the object resting on the wet stone ground. "
+        "The object is normal, realistic size, blending into the rain-soaked environment. "
+        "Absolutely no hands, no fingers, no people visible. Pure environmental still life. "
+        "Focus on the object's texture against the dark cobblestones.",
 
     "low_angle":
         "LOW ANGLE LOOKING UP. Camera at the floor. The figure towers like a dark pillar, "
@@ -246,6 +262,7 @@ class GameState(BaseModel):
     current_chapter: int = 1
     scene_object: str = ""
     puzzle_stage: int = 1
+    puzzle_object_anchor: str = ""
     inventory: List[str] = []
     flags: dict = {}
     history: List[Any] = []
@@ -266,6 +283,8 @@ class GameState(BaseModel):
     mailbox_unlocked: bool = False # 信箱密碼驗證是否已通過
     # ── V40.0 玩家驅動動態解謎系統 ──
     player_quest: dict = {}  # 實例: {"active": True, "theme": "ufo_hunt", "theme_name": "飛庫入侵", "steps": ["找鎖區", "找鑰匙"], "completed": [], "step": 1, "total": 2}
+    # ── V52.0 解謎間探索緩衝期 ──
+    explore_cooldown: int = 0  # 解謎後的自由漫遊回合數，>0 時不起下一導解謎
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -363,9 +382,9 @@ STEP 3：任務進行中 — 每回合的敘事要求
 ④ 章節轉換：完成一章所有謎題後，在 narration 中給出章節過渡感（「天空微微變色⋯⋯彷彿進入了另一個時間」）
 
 ⑤ 任務進度更新：
-   - 完成一個謎題步驟：quest_action: "progress"
+   - 完成一個謎題步驟：quost_action: "progress"
    - 正在解謎途中：quest_action: "ongoing"
-   - 所有章節完成：quest_action: "complete" + is_ending: true
+   - 【所有章節完成】：不等於立刻 is_ending: true！請先用至少 2~3 回合偏寫「最終收尾」，讓玩家感受完整結局的會心，再回傳 quest_action: "complete" + is_ending: true
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 quest JSON 欄位規格（完整版）
@@ -505,6 +524,12 @@ quest JSON 欄位規格（完整版）
 2. 第二半線索藏在主角的記憶中。只有當玩家提出線索後，主角才會被觸發並說出剩下的線索（例如：「04……我記得後面好像是 12」）。
 玩家必須將這兩半結合並下達指令（例如：「輸入 0412」），才能過關。
 
+【視覺盲區與 AI 提示機制 (Visual Blind Spot & AI Hinting)】
+這是實現「看圖解謎」的核心機制：
+1. **隱藏工具**：當你設計障礙（如鐵絲網、被鎖住的門、兇猛的怪物）時，你【必須】在 `image_prompt` 和 `puzzle_object_anchor` 中偷偷加入「解藥/工具/可利用的地形」（如：地上有一把生鏽的鉗子、牆角有一把鐵鎚、頭頂有搖搖欲墜的鋼筋），讓繪圖引擎把它畫出來。
+2. **主角裝瞎**：在第一時間，主角的 `dialogue` 和 `narration` 【絕對不能】直接點出這個解藥。主角只能表現出絕望或無助（例如：「鐵絲網太高了，我們過不去」），等待玩家自己從生成的「圖片」中發現工具，並主動下達指令提醒他（例如玩家說：「去拿地上的鉗子剪開鐵絲網」）。
+3. **卡關提示 (Hinting)**：如果玩家嘗試了兩三回合，依然沒有發現圖片中的線索，給出錯誤或無效的建議導致劇情卡住。此時你必須讓主角或旁白給出「微弱的提示」來幫助玩家（例如：narration:「雨水沖刷著牆角的雜物堆，其中似乎有一塊金屬反光...」；或者 dialogue:「我真的沒辦法了...等等，你覺得旁邊那堆廢鐵裡會有能用的東西嗎？」）。
+
 【軌道 A：預設主線（深層恐懼與記憶回溯）】
 當玩家沒有明確方向（如說「繼續」、「你好」）時進入此軌道，依序完成 5 階段：
 - Stage 0：【開場】主角在暴雨的暗巷醒來，失去記憶，玩家需透過對話建立信任。
@@ -554,6 +579,7 @@ quest JSON 欄位規格（完整版）
 ‼️ 語言指令（最高優先級）
 ═══════════════════════════════════
 - dialogue 和 narration：【100% 繁體中文】，絕對禁止英文。
+- 🗣️【語意連貫強制要求】：dialogue (主角對話) 與 narration (旁白描述) 必須有著直接的邏輯因果關係！如果旁白描述主角發現了某個物品或現象，主角的對話就【必須】針對該物品或現象做出反應，絕對不可以在旁白發現線索時，主角卻在聊毫不相干的哲學問題或過去的記憶。
 
 【對話人性化要求 — 這是最重要的文字品質控制】
 主角說話要像一個真實的、受挫的現代年輕人。
@@ -579,6 +605,13 @@ quest JSON 欄位規格（完整版）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 每一句 dialogue，主角說完之後，玩家都應該知道「接下來可以說什麼」。
 主角說的話不能是死胡同——說完讓人完全不知道怎麼回應的句子是失敗的台詞。
+
+【主角主動提案機制 (Proactive Proposal)】
+當進入新的解謎階段或遇到具體障礙（例如：怪物、鎖上的門、奇怪的物品）時，主角不能只是被動發呆或單純描述害怕。
+主角必須主動觀察四周的環境，並向玩家提出 **2 個具體的行動選項（一好一壞，或兩個都行）**，詢問玩家的意見。
+- 正確範例：「前面有隻黑影怪物擋路...地上剛好有個空鐵罐，你覺得我該把鐵罐丟出去引開牠？還是我們該慢慢從陰影處溜過去？」
+- 正確範例：「門鎖上了。旁邊有個碎石頭，我要直接砸開它嗎？還是去附近找找有沒有鑰匙？」
+這樣能幫助玩家知道這個遊戲允許哪些操作，避免玩家陷入「不知道該輸入什麼」的空白畫布恐慌。
 
 ⛔ 【死胡同台詞 — 絕對禁止】（玩家看完不知道該說什麼）：
 - 「不重要。只有雨才是真的。」
@@ -617,27 +650,22 @@ quest JSON 欄位規格（完整版）
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📷 image_prompt 視覺謎題同步系統 (Visual Puzzle Synchronization)
+📷 image_prompt 與 puzzle_object_anchor 視覺謎題同步系統
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`image_prompt` 是生成畫面的指令。為了確保玩家能真的「看圖解謎」，文字跟畫面必須 100% 同步！
+為了確保玩家能真的「看圖解謎」，文字跟畫面必須 100% 同步！絕對不能發生「旁白提到某個謎題道具，但畫面中完全沒有畫出來」的嚴重錯誤。
 
-【視覺謎題引導模式】
-當前處於解謎階段 (Stage 1~4) 且你需要玩家觀察某個【關鍵道具】或【環境異常】（例如：懷錶、空鐵罐、門上塗鴉、閃爍的路燈）時：
-1. **強制實體化**：你【絕對必須】將這個關鍵道具的英文描述寫入 `image_prompt` 中！
-2. **配合鏡頭**：為了確保玩家能看清楚道具，你必須選擇能凸顯該道具的 `camera_angle`（例如：選 `item_closeup` 特寫懷錶，或 `medium` 中景看見地上的鐵罐），絕對不能在需要找小東西時使用 `extreme_wide` 導致道具小到看不見。
-3. **雙重引導**：畫面中生成道具後，你的 `narration` (旁白) 也要用繁體中文點出該道具，形成「畫面看到 + 旁白點出」的完美配合。
+【視覺謎題引導模式（強制執行）】
+當你決定在劇情中放入某個【解謎道具】或【環境異常】（例如：門上的太陽/眼睛/房子塗鴉、地上的懷錶、空鐵罐）時，你必須嚴格遵守以下流程：
+1. **先確立劇情**：在 `dialogue` 和 `narration` 中具體描述這個謎題道具。
+2. **強制實體化翻譯**：你【絕對必須】將這個道具的具體物理特徵，原封不動地翻譯成英文，並寫入 `image_prompt` 以及 `puzzle_object_anchor` 中！
+3. **選擇正確分鏡**：為了確保玩家能看清楚道具，你必須選擇能凸顯該道具的 `camera_angle`（例如：選 `item_closeup` 特寫道具，或 `medium` 中景看見門上的圖案），絕對不能選 `extreme_wide` 導致道具小到看不見。
 
-預設主線必備道具中英對照：
-- Stage 1: a broken pocket watch in a puddle (積水裡的停擺懷錶)
-- Stage 2: a dented tin can on the ground (地上的空鐵罐)
-- Stage 3: childish drawings on the door: a sun, a crying eye, a locked house (門上的童年塗鴉)
-- Stage 4: a torn photograph on the ground and a rusted key (地上的碎照片與生鏽鑰匙)
+✅ 【正確的視覺同步範例】：
+- narration：「死胡同底端出現了一扇沉重的鐵門。門面鏽跡斑斑，沒有門把，只有三個用粉筆畫上去的圖案：太陽、哭泣的眼睛、還有一間鎖上的房子。」
+- image_prompt："A medium shot of a heavy, rusted iron door at the end of an alley. There are three chalk drawings on the door: a sun, a crying eye, and a locked house. No doorknob."
+- puzzle_object_anchor："A heavy, rusted iron door with three chalk drawings on it: a sun, a crying eye, and a locked house."
 
-image_prompt 格式要求：
-用簡單精確的英文描述「場景裡有什麼、主角在做什麼、關鍵道具在哪裡」。
-例子："A dark rainy alley. Medium shot. The figure stands near the wall. On the wet stone ground, there is a dented tin can."
-
-⛔ 【絕對禁止】在 image_prompt 中寫：畫風、黑白、構圖指令、Noir、炭筆、比例數字。生圖引擎已經有專門處理畫風的系統，你只負責描述「內容物」。
+⛔ 【絕對禁止】在 image_prompt 中寫：畫風、黑白、構圖指令、Noir、炭筆。你只負責用最白話的英文描述「內容物」，生圖引擎會自己套用黑白濾鏡。
 
 【鏡頭系統指令】
 請根據當前的敘事情緒、主角動作與場景氛圍，選擇最能傳達畫面張力的鏡頭。
@@ -700,14 +728,15 @@ image_prompt 格式要求：
     "dialogue": "主角說的話（繁體中文）",
     "narration": "場景旁白（繁體中文）",
     "image_prompt": "只需一句話描述當前畫面發生了什麼",
-    "camera_angle": "wide | medium | close_face | low_angle | overhead | extreme_wide | over_shoulder | dutch_angle | shadow_silhouette | puddle_reflection | tracking",
+    "camera_angle": "wide | medium | close_face | low_angle | overhead | extreme_wide | over_shoulder | dutch_angle | shadow_silhouette | tracking",
     "scene_location": "alley | doorway | street_corner | under_awning | overpass | rooftop_edge | phone_booth | subway_entrance | alley_exit",
     "character_pose": "natural action description in English",
     "fear_level": 0.0,
     "resistance_type": "comply | refuse | opposite",
     "is_ending": false,
     "stage_cleared": false,
-    "clue_revealed": null,
+    "clue_revealed": "若發現線索請填寫簡短名稱(限繁體中文)，無則填 null",
+    "puzzle_object_anchor": "用英文詳細描述當前解謎的核心物件外觀，用於固定生圖畫風。若無則填 null",
     "ending_type": "none"
 }
 """
@@ -748,7 +777,8 @@ client_vertex = genai.Client(
 client_studio = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "medium",
-                       scene_location: str = "alley", character_pose: str = "", is_puzzle: bool = False):
+                       scene_location: str = "alley", character_pose: str = "", is_puzzle: bool = False,
+                       emotional_stage: int = 1, puzzle_object_anchor: str = ""):
     import random
     sanitized = raw_prompt if raw_prompt else "A young adult figure in the rain."
 
@@ -779,9 +809,22 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
         r"\bbright(?:ly)?\b":           "dim and shadowed",
         r"\borange\b":                  "dark grey",
         r"\byellow(?:ish)?\b":          "grey",
+        r"\bred(?:dish)?\b":            "grey",
+        r"\bblue(?:ish)?\b":            "dark grey",
+        r"\bgreen(?:ish)?\b":           "grey",
+        r"\bpink(?:ish)?\b":            "grey",
+        r"\bpurple\b":                  "dark",
+        r"\bgold(?:en)?\b":             "grey",
+        r"\bsilver\b":                  "grey",
+        r"\bwhite\b":                   "grey",
+        r"\bblood\b":                   "dark ink",
+        r"\bfire\b":                    "darkness",
+        r"\bflame(?:s)?\b":             "shadow",
         r"\bambient\b":                 "diffuse grey",
         r"\bwarm\b":                    "cold grey",
         r"\bcolored?\b":                "grey",
+        r"\bpaint(?:ed|ing)?\b":        "inked",
+        r"\bspray(?:ed)?\b":            "inked",
     }
     for pattern, replacement in color_killers.items():
         sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
@@ -826,16 +869,58 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
     import random as _r
     extra_object = _r.choice(SCENE_OBJECTS)
 
-    # 🎥 分鏡選擇：解謎期間優先使用特寫
+    # 🎥 分鏡選擇邏輯 — 雙階段視覺風格系統
     current_angle = camera_angle
-    if is_puzzle and current_angle == DEFAULT_CAMERA:
-        current_angle = "item_closeup"
-    
-    framing = CAMERA_ANGLES.get(current_angle, CAMERA_ANGLES[DEFAULT_CAMERA])
-    print(f"[CAMERA] angle={current_angle}")
 
+    # 【情感接觸期】：emotional_stage == 0（前 3~5 回合）
+    # 強制使用「角色聚焦鏡頭」讓玩家觀察主角情緒與肢體語言
+    # 允許的鏡頭：medium, close_face, over_shoulder, shadow_silhouette, low_angle, dutch_angle
+    EMOTIONAL_CONTACT_ANGLES = ["medium", "close_face", "over_shoulder", "shadow_silhouette", "low_angle", "dutch_angle"]
+    if emotional_stage == 0 and not is_puzzle:
+        if current_angle not in EMOTIONAL_CONTACT_ANGLES:
+            # 若 Gemini 選了遠景或無人視角，強制降級為最能展現情緒的鏡頭
+            import random as _ea
+            current_angle = _ea.choice(["medium", "close_face", "over_shoulder", "shadow_silhouette"])
+            print(f"[CAMERA] 情感接觸期強制降級 → {current_angle}")
+
+    # 【解謎期】：is_puzzle == True 且分鏡預設為 medium，強制改為多樣化的物件特寫視角
+    if is_puzzle and current_angle == DEFAULT_CAMERA:
+        import random as _puzzle_cam
+        current_angle = _puzzle_cam.choice(["item_closeup", "over_shoulder", "medium"])
+
+    framing = CAMERA_ANGLES.get(current_angle, CAMERA_ANGLES[DEFAULT_CAMERA])
+    print(f"[CAMERA] angle={current_angle} | emotional_stage={emotional_stage} | is_puzzle={is_puzzle}")
+
+    # ===================================================================
+    # 🎯 道具特寫優先系統 (Object Closeup Priority System)
+    # 規則：只要 puzzle_object_anchor 存在，不管哪個 Stage，
+    #       一律強制切換成「道具特寫鏡頭 (item_closeup)」，人物完全不生成。
+    # ===================================================================
+    if puzzle_object_anchor:
+        # 強制清理 sanitized 中的人物字眼
+        sanitized = re.sub(r'(?i)\b(?:figure|character|person|man|slender figure|protagonist|human|boy|girl|hand|arm|face|body|hood|jacket|young adult|teenager)\b', '', sanitized)
+        sanitized = re.sub(r'(?i)\b(a|an|the)\s+picking\b', 'picking', sanitized)
+        sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+
+        # 取得背景環境描述（去掉道具本身，避免重複）
+        bg_env = scene_desc
+
+        return (
+            f"EXTREME CLOSE-UP MACRO SHOT of a single, naturally-scaled object: {puzzle_object_anchor}. "
+            f"The object is the primary subject of this shot, rendered in pure black ink and grey. "
+            f"PROPORTION RULE: The object MUST be of normal, realistic, small size relative to its natural environment (e.g. a hand-sized pocket watch lying in a tiny puddle on the ground). IT IS NOT A GIANT OBJECT. IT IS NOT OVERSIZED. NO surreal scale. All surrounding elements, such as water ripples, rain droplets, and cracks on the wet stones, must maintain perfect realistic proportions to make the object look naturally small and normal-sized.\n"
+            f"Composition: MACRO SHOT. Camera at ground level or eye-level, focusing entirely on the object. "
+            f"The object is sharply detailed in the foreground, occupying about 50% of the frame. "
+            f"Background: {bg_env}, dark wet stone ground, rain pouring, deep shadows. NO PEOPLE. NO CHARACTERS. NO HUMANS. NO FIGURES.\n"
+            f"ABSOLUTE PROHIBITION: NO multiple people. NO clones. NO PEOPLE AT ALL. NO 3D. NO CGI. NO photorealistic. NO realistic. NO photography. NO render. NO COLOR. STRICT GRAYSCALE ONLY. NO PANELS. NO FRAMES. NO WHITE MARGINS. NO giant objects. NO oversized items. NO surreal scale.\n"
+            f"Visual Style: {style_base}\n"
+            f"FULL BLEED 16:9 EDGE-TO-EDGE. ABSOLUTELY NO WHITE BORDERS OR MARGINS ALLOWED. Dense black ink fills. Crosshatching shadows."
+        )
+
+
+    # 無道具錨點時：根據分鏡模式正常生成人物鏡頭
     # 🧑‍🎨 角色與構圖描述：根據分鏡完全切換，避免人物成為不必要的重點
-    NO_PERSON_ANGLES = ["overhead", "item_closeup", "puddle_reflection"]
+    NO_PERSON_ANGLES = ["overhead", "item_closeup"]
     FAR_ANGLES = ["wide", "extreme_wide"]
 
     if is_puzzle or current_angle in NO_PERSON_ANGLES:
@@ -843,8 +928,8 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
         char_block = "FIRST PERSON POV. NO PEOPLE IN THIS SHOT. ABSOLUTELY NO CHARACTERS. NO HUMANS. FOCUS 100% ON THE ENVIRONMENT AND PUZZLE OBJECTS."
         face_shadow_block = ""
         comp_prefix = "Composition: PURE ENVIRONMENT. FIRST PERSON POINT OF VIEW."
-        # 強制清理分鏡描述中的人物字眼，防止 Imagen 誤畫
-        framing = re.sub(r'(?i)\b(?:figure|character|person|man|slender figure|towering pillar|silhouette)\b.*?[.!?]', '', framing)
+        framing = re.sub(r'(?i)\b(?:figure|character|person|man|slender figure|towering pillar|silhouette)\b', '', framing)
+        framing = re.sub(r'\s+', ' ', framing).strip()
     elif current_angle in FAR_ANGLES:
         # B 模式：遠景小黑點
         char_block = f"CHARACTER: A SINGLE LONE TINY FIGURE, silhouette lost in the vast environment. NO FACIAL DETAILS. Action: {pose}."
@@ -856,21 +941,13 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
         face_shadow_block = "FACE SHADOW: Eyes are naturally lost in the deep, heavy black ink shadow cast by the long, wet bangs. NO EYES VISIBLE."
         comp_prefix = "Composition: SINGLE FIGURE."
 
-    # 🛠️ 權重優先級處理：解謎期間將道具移至最前端
-    puzzle_prefix = ""
-    if is_puzzle and sanitized:
-        # 強制清理 Gemini 輸出的提示詞中的人物字眼，防止其在解謎期亂入
-        sanitized = re.sub(r'(?i)\b(?:figure|character|person|man|slender figure|protagonist|human|boy|girl|hand|arm|face|body|figure|hood|jacket)\b.*?[.!?]', '', sanitized)
-        puzzle_prefix = f"CRITICAL FOCUS: {sanitized}. The primary subject is {sanitized}. Make sure the {sanitized} is clearly visible in the foreground.\n"
-
     return (
-        f"{puzzle_prefix}"
         f"{char_block}\n"
         f"{comp_prefix} {framing}\n"
-        f"ABSOLUTE PROHIBITION: NO 3D. NO CGI. NO photorealistic. NO realistic. NO photography. NO render. NO eyes. NO jackets. NO coats. NO formal wear. NO unzipped clothes. NO zippers. NO t-shirts. NO streetlight. NO lamp. NO moon. NO glow. NO illumination of any kind. NO light source. Scene lit ONLY by flat dark overcast sky. NO COLOR. STRICT GRAYSCALE ONLY. NO PANELS. NO FRAMES. NO WHITE MARGINS. NO COMIC PAGES.\n"
+        f"ABSOLUTE PROHIBITION: NO multiple people. NO clones. ONLY ONE PERSON MAXIMUM. NO 3D. NO CGI. NO photorealistic. NO realistic. NO photography. NO render. NO eyes. NO jackets. NO coats. NO formal wear. NO unzipped clothes. NO zippers. NO t-shirts. NO streetlight. NO lamp. NO moon. NO glow. NO illumination of any kind. NO light source. Scene lit ONLY by flat dark overcast sky. NO COLOR. STRICT GRAYSCALE ONLY. NO PANELS. NO FRAMES. NO WHITE MARGINS. NO COMIC PAGES.\n"
         f"{face_shadow_block}\n"
         f"Visual Style: {style_base}\n"
-        f"Environment: {scene_desc}, {sanitized if not is_puzzle else ''}, {extra_object}\n"
+        f"Environment: {scene_desc}, {sanitized}, {extra_object}\n"
         f"FULL BLEED 16:9 EDGE-TO-EDGE. ABSOLUTELY NO WHITE BORDERS OR MARGINS ALLOWED. Dense black ink fills. Crosshatching shadows."
     )
 
@@ -1036,6 +1113,31 @@ async def handle_suggestion(req: SuggestionRequest):
                 f"3. 請務必輸出：『is_ending』: true、符合主題的『ending_title』、包含解謎回顧的『ending_narrative』以及深沉的『ending_retrospective』。"
             )
 
+        # 探索緩衝資訊注入：告知 Gemini 目前是否在解謎後的自由漫遊期，或是大結局鋪墊期
+        cooldown_context = ""
+        if state.puzzle_stage > 4:
+            if state.explore_cooldown > 0:
+                cooldown_context = (
+                    f"\n\n🌟 「大結局鋪墊期」：所有謎題皆已解開！目前進入大結局前的慢慢鋪墊階段（剩 {state.explore_cooldown} 回合）。"
+                    f"請讓主角與環境進行最後的沉澱與互動，慢慢走向最終的目標。此階段【絕對禁止】設定 is_ending=true。"
+                )
+            elif state.turn < 28:
+                cooldown_context = (
+                    f"\n\n🌟 「大結局鋪墊期」：謎題已解開，但故事仍需沉澱（目前第 {state.turn} 回合，目標約 30 回合）。"
+                    f"請繼續與玩家自然互動，讓情緒慢慢堆疊。此階段【絕對禁止】設定 is_ending=true。"
+                )
+            else:
+                cooldown_context = (
+                    f"\n\n🌟 「結局觸發點」：鋪墊已完成，情緒已到位。請在這回合或接下來的互動中，"
+                    f"根據玩家的行動給出一個深刻的結局，並回傳 `is_ending: true`。"
+                )
+        elif state.explore_cooldown > 0:
+            cooldown_context = (
+                f"\n\n🌟 「解謎後的呼吸期」：玩家剛剛完成了一個解謎。"
+                f"目前屬於「自由漫遊期（剩 {state.explore_cooldown} 回合）」，請不要立即推出下一個解謎。"
+                f"請讓主角自然地漫步、感受環境、或對玩家的建議做出自然反應。"
+                f"【絕對禁止】在這回合出現新的解謎物件、線索或提示。"
+            )
         context = (
             f"回合：{state.turn}，情感階段：{state.emotional_stage}，"
             f"恐懼：{state.fear}，解謎階段：{state.puzzle_stage}，"
@@ -1044,6 +1146,7 @@ async def handle_suggestion(req: SuggestionRequest):
             f"本回合玩家建議：『{req.suggestion}』"
             f"{recent_history}"
             f"{quest_context}"
+            f"{cooldown_context}"
             f"{extra_instruction}"
         )
 
@@ -1148,27 +1251,50 @@ async def handle_suggestion(req: SuggestionRequest):
         if stage_cleared and state.puzzle_stage <= 4:
             if clue and clue != "null" and clue not in state.inventory:
                 state.inventory.append(clue)
-            print(f"[PUZZLE] AI 判定玩家解開 Stage {state.puzzle_stage}！推進至下一階段。")
+            
+            if state.puzzle_stage == 4:
+                print(f"[PUZZLE] AI 判定玩家解開最終 Stage 4！啟動 5 回合大結局鋪墊期。")
+                state.explore_cooldown = 5  # 結局前給予 5 回合的長效鋪墊
+            else:
+                print(f"[PUZZLE] AI 判定玩家解開 Stage {state.puzzle_stage}！啟動 3 回合探索緩衝期。")
+                state.explore_cooldown = 3  # 關卡間給予 3 回合緩衝
             state.puzzle_stage += 1
             state.current_chapter = state.puzzle_stage
+            state.puzzle_object_anchor = "" # 換關卡時清除舊錨點
+
+        elif state.explore_cooldown > 0:
+            state.explore_cooldown -= 1
+            print(f"[COOLDOWN] 探索緩衝期倒計數: {state.explore_cooldown} 回合剩餘")
 
         # 將驗證結果注入 context (不再需要 phone/mailbox correct，留空避免前端壞掉)
         data["phone_correct"] = stage_cleared
         data["mailbox_correct"] = stage_cleared
 
-        # Gemini 決定結局時立刻生效，不再需要強制完成解謎
+        new_anchor = data.get("puzzle_object_anchor")
+        if new_anchor and new_anchor != "null" and not state.puzzle_object_anchor:
+            state.puzzle_object_anchor = new_anchor
+
+        # Gemini 決定結局時立刻生效，但加入嚴格的「全破關+最少回合數」雙重保護
+        # ⚠️ 特殊例外：若玩家態度惡劣、瘋狂辱罵或有激進言論，觸發了壞結局（lost_in_rain 或 connection_lost），則允許直接跳入結局，不受回合數與謎題限制。
         gemini_wants_end = data.get("is_ending", False)
+        ending_type = data.get("ending_type", "none")
+        is_bad_ending = ending_type in ["lost_in_rain", "connection_lost"]
+
         if gemini_wants_end:
-            state.is_over = True
-            
+            if is_bad_ending:
+                state.is_over = True
+                print(f"[GUARD] 偵測到玩家激進或辱罵言論，觸發早期壞結局（{ending_type}），直接跳過回合與謎題限制！")
+            elif state.turn >= 28 and state.puzzle_stage > 4:
+                state.is_over = True
+            else:
+                print(f"[GUARD] Gemini 要結局但條件未滿（回合 {state.turn}/28, 階段 {state.puzzle_stage}/5），且非玩家惡意結局，封鎖結局觸發。")
+                data["is_ending"] = False
+
 
         # ── 結局判定 ──
-        # 現在移除所有硬性數值限制（如 fear > 85），結局完全交給 AI 敘事判斷或完成解謎階段
-
-        # 解謎都完成也是結局（現在是 4 階段，過完 4 就進結局 Stage 5）
-        puzzle_complete = state.puzzle_stage > 4
-        if puzzle_complete:
-            state.is_over = True
+        # 現在移除所有硬性數值限制，結局完全交給 AI 在鋪墊期結束後判斷
+        
+        # （已移除）不再因為 puzzle_complete 就強制瞬間結束，讓遊戲有鋪墊空間
 
         if state.turn >= 150:  # 絕對上限：150 回合（僅作為最後安全閥）
             state.is_over = True
@@ -1211,10 +1337,25 @@ async def handle_suggestion(req: SuggestionRequest):
 {suggestions_summary}
 
 ⚠️ 創作規則（必須嚴格遵守）：
-1. 【標題】必須直接反映玩家的具體行動，例如：玩家叫主角去找薯條→「【結局：油炸的溫度】」，玩家叫主角數星星→「【結局：算不完的夜空】」。
-2. 【絕對禁止】使用「終焉之雨」、「命運之雨」、「雨中告別」等泛用雨水標題。標題必須反映玩家做了什麼，不是泛指「在雨中」。
-3. 每一個玩家的結局都必須因為他們的建議歷程而與眾不同。讀一遍玩家歷程，找出最關鍵的一兩個建議，把它們放進標題和結局文字。
-4. 如果玩家建議很荒謬（例如叫主角跳舞、叫他做伏地挺身），結局也要認真呼應這個荒謬，而不是忽略它。{fastforward_instruction}
+1. 【標題命名哲學 — 詩意隱喻，絕不直白】
+   標題的任務是「喚起感受」，而不是「描述事件」。
+   請根據玩家的行動，找出它背後的**情感本質**或**隱喻意象**，再轉化成詩意的標題。
+
+   ✅ 好標題範例（根據玩家行動提煉情感）：
+   | 玩家做的事 | ❌ 直白版（禁止） | ✅ 詩意版（正確） |
+   |---|---|---|
+   | 去找薯條吃 | 薯條的結局 | 炸得金黃的那一夜 |
+   | 餵流浪狗罐頭 | 餵狗的結局 | 牠用鼻子碰了我的手 |
+   | 數天上的星星 | 數星星的結局 | 算不完的夜空 |
+   | 跑步離開巷子 | 跑步的結局 | 鞋底踩過的距離 |
+   | 叫主角唱歌 | 唱歌的結局 | 沒人聽見的那首歌 |
+   | 找醫院幫人包紮 | 找醫院的結局 | 白色繃帶的溫度 |
+
+   規則：標題要讓人看了有畫面感和情緒感，就算不知道「玩家做了什麼」也能感受到故事的氛圍。
+
+2. 【絕對禁止】使用「終焉之雨」、「命運之雨」、「雨中告別」等泛用雨水標題，也禁止直接引用玩家的建議動詞作為標題。標題必須是從行動中提煉出的意象，不是行動本身。
+3. 每一個玩家的結局都必須因為他們的建議歷程而與眾不同。讀一遍玩家歷程，找出最關鍵的一兩個建議，把它們的**情感核心**放進標題和結局文字。
+4. 如果玩家建議很荒謬（例如叫主角跳舞、叫他做伏地挺身），結局也要認真呼應這個荒謬，標題也用同樣手法轉化——荒謬的行動往往有最深刻的意象。{fastforward_instruction}
 
 請根據上述所有資訊，用繁體中文寫出：
 1. 【結局標題】（必須反映玩家實際做的事，格式：【結局：你的標題】）
@@ -1233,7 +1374,7 @@ async def handle_suggestion(req: SuggestionRequest):
             )
             try:
                 end_resp = client_studio.models.generate_content(
-                    model="gemini-2.5-flash-preview-05-20",
+                    model="gemini-flash-latest",
                     contents=ending_prompt
                 )
                 end_text = end_resp.text.strip()
@@ -1259,7 +1400,8 @@ async def handle_suggestion(req: SuggestionRequest):
 
         # 如果是結局回合，將原本的 prompt 加上結局特效修飾，確保生成對應結局的獨一無二插圖
         if state.is_over:
-            ending_modifier = f" A cinematic final shot for the ending '{state.ending}'. Highly surreal, dramatic lighting, profound narrative conclusion, extreme emotional impact. "
+            # 移除 "dramatic lighting" 以防 AI 誤解為產生彩色光源，強制加入黑白宣告
+            ending_modifier = f" A cinematic final shot for the ending '{state.ending}'. Highly surreal, dramatic high-contrast chiaroscuro shadow, profound narrative conclusion, extreme emotional impact. STRICTLY MONOCHROME NO COLOR. "
             if state.ending == "lost_in_rain":
                 data["image_prompt"] = "A dissolving figure fading into pure black void. Heavy ink bleeding, intense rain, face completely lost. Existential dread."
                 data["camera_angle"] = "shadow_silhouette"
@@ -1281,9 +1423,15 @@ async def handle_suggestion(req: SuggestionRequest):
         scene_location = data.get("scene_location", "alley")
         character_pose = data.get("character_pose", "")
         
-        # 如果正在解謎，就強制啟用第一人稱無人視角
-        is_puzzle_phase = (1 <= state.puzzle_stage <= 4 and not state.is_over)
-        final_prompt = build_image_prompt(raw_image_prompt, state.fear / 100.0, camera_angle, scene_location, character_pose, is_puzzle=is_puzzle_phase)
+        # 如果正在解謎（Stage 2: 回憶號碼, Stage 3: 撥通電話, Stage 5: 開啟信箱），就強制啟用第一人稱無人視角
+        # 探索探索階段（Stage 1: 尋找電話亭, Stage 4: 前往公寓）與結局階段（Stage 6: 家門之前）保留人物存在
+        # 情感接觸期（emotional_stage == 0, 前 3~5 回合）：強制角色聚焦鏡頭，展現肢體語言與情緒反應
+        is_puzzle_phase = (state.puzzle_stage in [2, 3, 5] and not state.is_over)
+        final_prompt = build_image_prompt(
+            raw_image_prompt, state.fear / 100.0, camera_angle, scene_location, character_pose,
+            is_puzzle=is_puzzle_phase, emotional_stage=state.emotional_stage,
+            puzzle_object_anchor=state.puzzle_object_anchor
+        )
         vision_metadata["final_prompt"] = final_prompt
         vision_metadata["camera_angle"] = camera_angle
         vision_metadata["scene_location"] = scene_location
@@ -1326,7 +1474,7 @@ async def handle_suggestion(req: SuggestionRequest):
 
         vision_metadata["latency"] = round(time.time() - img_start, 2)
 
-        # 紀錄本回合歷史
+        # 紀錄本回合歷史 (暫存 image_b64，結局時才會寫入硬碟)
         turn_record = {
             "turn": state.turn,
             "user_suggestion": req.suggestion,
@@ -1337,28 +1485,37 @@ async def handle_suggestion(req: SuggestionRequest):
             "image_prompt": raw_image_prompt,
             "camera_angle": camera_angle,
             "text_metadata": text_metadata,
-            "vision_metadata": vision_metadata
+            "vision_metadata": vision_metadata,
+            "image_b64": image_b64 if image_b64 else None,
+            "image_url": ""
         }
         state.history.append(turn_record)
 
-        # 如果遊戲結束，將整場遊玩紀錄存成 JSON 檔案
+        # 如果遊戲結束，將整場遊玩紀錄存成 JSON 檔案，並且將過程中暫存的圖片寫入硬碟
         if state.is_over:
             import datetime
             import uuid
+
+            os.makedirs(ARCHIVE_IMAGES_DIR, exist_ok=True)
             
-            # 儲存結局圖片
-            final_image_url = ""
-            if image_b64:
-                archive_img_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "archive_images")
-                os.makedirs(archive_img_dir, exist_ok=True)
-                img_filename = f"end_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
-                img_path = os.path.join(archive_img_dir, img_filename)
-                try:
-                    with open(img_path, "wb") as f:
-                        f.write(base64.b64decode(image_b64))
-                    final_image_url = f"archive_images/{img_filename}"
-                except Exception as save_img_e:
-                    print(f"[SAVE ERROR] 儲存圖片失敗: {save_img_e}")
+            # 遍歷歷史紀錄，將每一回合的 image_b64 寫入實體硬碟並產生 URL
+            for turn in state.history:
+                if turn.get("image_b64"):
+                    img_filename = f"turn_{turn['turn']}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
+                    img_path = os.path.join(ARCHIVE_IMAGES_DIR, img_filename)
+                    try:
+                        with open(img_path, "wb") as f:
+                            f.write(base64.b64decode(turn["image_b64"]))
+                        turn["image_url"] = f"/data_archive_images/{img_filename}"
+                    except Exception as save_img_e:
+                        print(f"[SAVE ERROR] 儲存回合圖片失敗: {save_img_e}")
+                
+                # 刪除 image_b64，避免寫入 JSON 導致檔案過大
+                if "image_b64" in turn:
+                    del turn["image_b64"]
+            
+            # 最後一張產生的圖片會被視為最終結局圖片
+            final_image_url = state.history[-1].get("image_url", "") if state.history else ""
 
             run_data = {
                 "timestamp": datetime.datetime.now().isoformat(),
@@ -1372,10 +1529,10 @@ async def handle_suggestion(req: SuggestionRequest):
                 "final_image_url": final_image_url,
                 "history": state.history
             }
-            runs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
-            os.makedirs(runs_dir, exist_ok=True)
-            filename = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            filepath = os.path.join(runs_dir, filename)
+            # 將遊戲紀錄儲存到永久目錄
+            os.makedirs(RUNS_DIR, exist_ok=True)
+            filename = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}.json"
+            filepath = os.path.join(RUNS_DIR, filename)
             try:
                 with open(filepath, "w", encoding="utf-8") as f:
                     json.dump(run_data, f, ensure_ascii=False, indent=2)
@@ -1432,7 +1589,7 @@ async def handle_suggestion(req: SuggestionRequest):
 # ============================================================
 @app.get("/api/admin/runs")
 def list_runs():
-    runs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
+    runs_dir = RUNS_DIR
     errors_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "errors")
     
     runs = []
@@ -1465,7 +1622,7 @@ def get_run(filename: str):
 
 @app.get("/api/archives")
 async def get_archives():
-    runs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs")
+    runs_dir = RUNS_DIR
     if not os.path.exists(runs_dir):
         return []
     
@@ -1484,6 +1641,10 @@ async def get_archives():
     archives.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
     return archives
 
+# 永久圖片目錄：讓前端可以讀取 /data_archive_images/<filename>
+app.mount("/data_archive_images", StaticFiles(directory=ARCHIVE_IMAGES_DIR), name="data_archive_images")
+
+# 靜態前端資源（必須放在最後）
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
 if __name__ == "__main__":

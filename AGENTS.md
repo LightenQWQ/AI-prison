@@ -21,6 +21,7 @@
 ## 安全與記憶邊界
 - **絕不寫入**：API 金鑰、權杖 (Tokens)、密碼、未脫敏的個人識別資訊 (PII)。
 - **可安全寫入**：雜湊值 (Hashes)、指紋、參考路徑和系統變數名稱。
+- **程式碼規範**：**嚴格禁止在任何程式碼 (Python, JS, 腳本等) 中使用 Emoji 表情符號**。這會導致 Windows 環境編碼崩潰 (cp950)。日誌與終端機輸出只能使用純文字 (ASCII/UTF-8)。
 
 ## 成功日誌 (Success Log)
 - 2026-03-05 : 透過 AI Memory OS 藍圖初始化專案持久化記憶。
@@ -36,6 +37,7 @@
 - 2026-05-06 : 升級至 V22.5「情緒感應視覺系統」，實裝色彩殺手協議 (Color Killer Protocol) 與分鏡解放邏輯，達成 100% 二色調藝術渲染。
 - 2026-05-07 : 完成 V34.0「情感優先敘事引擎」，實裝雙階段敘事（情感接觸期→解謎期）、主角抗拒機制 (comply/refuse/opposite)、Heavy Ink Noir V33.8 視覺 DNA，並鎖定 gemini-flash-latest 別名解決 404 問題。
 - 2026-05-15 : 完成「檔案館 (Archives) 革命性重構」，導入列表-詳情 UI 佈局與沉浸式彈窗；實裝「層級式返回系統 (Layered Back)」與音訊面板 UI 優化，達成全局導航閉環。
+- 2026-05-18 : 最佳化「解謎期人物生成邏輯 (V51.0)」：限縮 is_puzzle_phase 至 Stage 2/3/5，保留探索期 (Stage 1/4) 與結局 (Stage 6) 人物剪影與陰影渲染；修正 build_image_prompt 破壞性 regex 截斷提示詞 Bug。
 
 ## 🏗️ Decision Log
 > Standardized metadata for architectural traceability.

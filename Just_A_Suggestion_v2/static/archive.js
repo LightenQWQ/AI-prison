@@ -48,49 +48,68 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function openDetail(index) {
     const record = currentArchives[index];
-    const modal = document.getElementById('modal-overlay');
-    const body = document.getElementById('modal-body');
+    const listContainer = document.getElementById('archive-list');
+    const detailView = document.getElementById('detail-view');
+    const detailBody = document.getElementById('detail-body');
+    const detailTitle = document.getElementById('detail-title');
+    const detailSubtitle = document.getElementById('detail-subtitle');
 
-    // 格式化對話歷史
-    let historyHtml = '';
+    // 隱藏清單，顯示詳細視圖
+    listContainer.style.display = 'none';
+    document.querySelector('.header').style.display = 'none'; // 隱藏主頁標題
+    
+    // 設定標題
+    detailTitle.textContent = record.ending_title || '【未命名結局】';
+    const dateStr = new Date(record.timestamp).toLocaleString('zh-TW');
+    detailSubtitle.textContent = `RECORDED ON ${dateStr}`;
+
+    let html = '';
+
+    // 遍歷歷史紀錄生成卡片
     if (record.history && record.history.length > 0) {
         record.history.forEach(turn => {
-            historyHtml += `
-                <div class="modal-turn">
-                    <div class="modal-turn-user">>> ${turn.user_suggestion || '...'}</div>
-                    ${turn.dialogue ? `<div class="modal-turn-dialogue">「${turn.dialogue}」</div>` : ''}
-                    ${turn.narration ? `<div class="modal-turn-narrative">${turn.narration}</div>` : ''}
+            const fear = turn.fear_level || 'N/A';
+            // 從 text_metadata 取出資訊，如果沒有則給預設值
+            const cd = (turn.text_metadata && turn.text_metadata.cooldown !== undefined) ? turn.text_metadata.cooldown : 'N/A';
+            const stage = (turn.text_metadata && turn.text_metadata.puzzle_stage !== undefined) ? turn.text_metadata.puzzle_stage : 'N/A';
+            
+            html += `
+            <div class="report-card">
+                <div class="turn-header">Turn ${turn.turn}</div>
+                <div class="player-msg">>> 玩家 (AI): ${turn.user_suggestion || '...'}</div>
+                ${turn.dialogue ? `<div class="ai-dialogue">主角: 「${turn.dialogue}」</div>` : ''}
+                ${turn.narration ? `<div class="ai-narration">旁白: ${turn.narration}</div>` : ''}
+                <div class="meta-info">
+                    🧩 Puzzle Stage: ${stage} | ⏳ Cooldown: ${cd} | 😨 Fear: ${fear}
                 </div>
+                ${turn.image_url ? `<div><img src="${turn.image_url}" class="game-image"></div>` : ''}
+            </div>
             `;
         });
     }
 
-    body.innerHTML = `
-        <img src="${record.final_image_url || ''}" class="modal-img" alt="Final Shot">
-        <h2 class="modal-title">${record.ending_title || '【未命名結局】'}</h2>
-        <p class="modal-narrative">${record.ending_narrative || ''}</p>
-        
-        <div class="modal-retro-title">Protagonist's Inner Perspective</div>
-        <div class="modal-retro">${record.ending_retrospective || '在那場雨中，我什麼也沒留下。'}</div>
-
-        <div class="modal-history-title">THE FULL STORY ARC</div>
-        <div class="modal-history-list">
-            ${historyHtml}
+    // 生成結局專屬卡片
+    html += `
+    <div class="report-card ending-card">
+        <div class="turn-header" style="color: #ffaa44;">[ ENDING REACHED ]</div>
+        <div class="ai-narration" style="color: #ddd;">${record.ending_narrative || ''}</div>
+        <div class="retro-text">
+            <strong>主角的回顧：</strong><br>
+            ${record.ending_retrospective || '在那場雨中，我什麼也沒留下。'}
         </div>
+        ${record.final_image_url ? `<div><img src="${record.final_image_url}" class="game-image" style="border-color:#ff4444;"></div>` : ''}
+    </div>
     `;
 
-    modal.style.display = 'flex';
-    setTimeout(() => {
-        modal.style.opacity = '1';
-    }, 10);
-    document.body.style.overflow = 'hidden';
+    detailBody.innerHTML = html;
+    
+    detailView.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function closeDetail(event) {
-    const modal = document.getElementById('modal-overlay');
-    modal.style.opacity = '0';
-    setTimeout(() => {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }, 400);
+function closeDetail() {
+    document.getElementById('detail-view').style.display = 'none';
+    document.querySelector('.header').style.display = 'block';
+    document.getElementById('archive-list').style.display = 'flex';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
