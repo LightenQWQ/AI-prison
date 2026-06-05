@@ -7,7 +7,7 @@
     <meta name="description" content="只是一個建議 — 封存所有階段的記憶與結局。">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌧</text></svg>">
     <link rel="stylesheet" href="style_v21_final.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&family=Crimson+Pro:ital,wght@0,400;1,400&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #010101;
@@ -245,6 +245,27 @@
             margin-bottom: 20px;
         }
 
+        .lang-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #666;
+            padding: 8px 15px;
+            cursor: pointer;
+            letter-spacing: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            z-index: 10002;
+        }
+        .lang-btn:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
         /* ── 手機版響應式排版 ── */
         @media (max-width: 600px) {
             .header {
@@ -261,6 +282,12 @@
             .back-btn {
                 top: 16px;
                 left: 16px;
+                font-size: 0.65rem;
+                padding: 6px 10px;
+            }
+            .lang-btn {
+                top: 16px;
+                right: 16px;
                 font-size: 0.65rem;
                 padding: 6px 10px;
             }
@@ -320,10 +347,11 @@
     </style>
 </head>
 <body>
+    <button class="lang-btn" id="lang-toggle-btn" onclick="toggleLanguage()">English</button>
     <div class="header">
-        <a href="/" class="back-btn"><< RETURN</a>
-        <h1>THE ARCHIVES</h1>
-        <div class="header-sub">RECORDS OF THE RAIN</div>
+        <a href="/" class="back-btn" id="back-to-home"><< RETURN</a>
+        <h1 id="archive-header-title">THE ARCHIVES</h1>
+        <div class="header-sub" id="archive-header-sub">RECORDS OF THE RAIN</div>
     </div>
 
     <div class="archive-container" id="archive-list">
@@ -350,6 +378,6 @@
         </div>
     </div>
 
-    <script src="archive.js?v=4"></script>
+    <script src="archive.js?v=5"></script>
 </body>
 </html>

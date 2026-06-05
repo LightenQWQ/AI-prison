@@ -761,6 +761,7 @@ AI 繪圖引擎對「高精度、精細字體（如 10 碼電話號碼、詳細�
 class SuggestionRequest(BaseModel):
     suggestion: str
     state: GameState
+    language: str = "zh"  # "zh" | "en"
 
 def extract_json(text: str):
     try:
@@ -975,6 +976,7 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
 
 class ThoughtRequest(BaseModel):
     suggestion: str
+    language: str = "zh"
 
 class DevPlotRequest(BaseModel):
     theme: str
@@ -1005,7 +1007,7 @@ async def generate_dev_plot(req: DevPlotRequest):
    - 【要求】請使用更寫實、有溫度的反應。例如：「我不相信你」、「你這是在害我」、「別開玩笑了，那樣會死人的」、「我不想聽你的」。
 請用繁體中文，以專業、優雅且「去中二化」的格式條列出來，字數大約 300-500 字。"""
         resp = client_studio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt
         )
         return {"plot": resp.text.strip()}
@@ -1021,7 +1023,7 @@ async def generate_quick_thought(req: ThoughtRequest):
 不要加引號，不要加句號，只要純文字，例如：為什麼他要我這麼做 或 這真的有意義嗎"""
         
         resp = client_studio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt
         )
         thought = resp.text.strip().replace('"', '').replace('「', '').replace('」', '')
@@ -1184,13 +1186,34 @@ async def handle_suggestion(req: SuggestionRequest):
             f"{extra_instruction}"
         )
 
+        # ── 語言指令：放在 context 最前面，確保 Gemini 優先看到 ──
+        if req.language == "en":
+            lang_prefix = (
+                "🔴 [ABSOLUTE PRIORITY - LANGUAGE LOCK] 🔴\n"
+                "The player has switched to ENGLISH mode. "
+                "You MUST respond 100% in English for ALL JSON fields: dialogue, narration, image_prompt, "
+                "ending_narrative, ending_title, ending_retrospective. "
+                "Do NOT use any Chinese characters in your response. "
+                "Even if previous history was in Chinese, switch to English immediately.\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+        else:
+            lang_prefix = (
+                "🔴 [ABSOLUTE PRIORITY - LANGUAGE LOCK] 🔴\n"
+                "玩家已切換回【繁體中文】模式。"
+                "你必須用繁體中文回應所有 JSON 欄位：dialogue、narration、image_prompt 等。"
+                "即使前幾回合的歷史是英文，請立即切換回中文回應。\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+        context = lang_prefix + context
+
         text_metadata["user_context"] = context
         text_metadata["system_prompt"] = SYSTEM_PROMPT[:200] + "..." # 僅顯示前段
         
         try:
             # 🟢 永恆穩定大腦：使用 gemini-2.5-flash 別名以確保 100% 可用性
             response = client_studio.models.generate_content(
-                model="gemini-2.5-flash", 
+                model="gemini-3.1-flash-lite", 
                 contents=context,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT, 
@@ -1204,7 +1227,7 @@ async def handle_suggestion(req: SuggestionRequest):
             if not data: raise Exception("JSON extraction returned empty")
             
             text_metadata["latency"] = round(time.time() - text_start, 2)
-            text_metadata["model"] = "gemini-2.5-flash"
+            text_metadata["model"] = "gemini-3.1-flash-lite"
             print(f"SUCCESS: Studio Gemini (Latest) responded.")
         except Exception as e:
             print(f"[STUDIO ERROR] Gemini 失敗: {e}")
@@ -1466,7 +1489,7 @@ async def handle_suggestion(req: SuggestionRequest):
             )
             try:
                 end_resp = client_studio.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.1-flash-lite",
                     contents=ending_prompt
                 )
                 end_text = end_resp.text.strip()
@@ -1593,6 +1616,140 @@ async def handle_suggestion(req: SuggestionRequest):
             "new_state": state, 
             "metadata": {"error": str(global_e)}
         }
+
+
+# ============================================================
+# 🌐 即時翻譯端點
+# ============================================================
+
+class TranslateRequest(BaseModel):
+    dialogue: str = ""
+    narration: str = ""
+    target_lang: str = "en"  # "en" | "zh"
+
+@app.post("/api/translate")
+async def handle_translate(req: TranslateRequest):
+    if not req.dialogue and not req.narration:
+        return {"dialogue": "", "narration": ""}
+    
+    target_name = "English" if req.target_lang == "en" else "Traditional Chinese (繁體中文)"
+    prompt = (
+        f"Translate the following game text to {target_name}.\n"
+        f"Keep the same emotional tone, style, and formatting (parentheses, etc.).\n"
+        f"Return ONLY a JSON object with keys 'dialogue' and 'narration'.\n"
+        f"Dialogue to translate: {req.dialogue!r}\n"
+        f"Narration to translate: {req.narration!r}"
+    )
+    try:
+        resp = client_studio.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        data = extract_json(resp.text)
+        return {
+            "dialogue": data.get("dialogue", req.dialogue),
+            "narration": data.get("narration", req.narration)
+        }
+    except Exception as e:
+        print(f"[TRANSLATE ERROR] {e}")
+        return {"dialogue": req.dialogue, "narration": req.narration}
+
+
+class ArchiveListItem(BaseModel):
+    index: int
+    ending_title: str = ""
+    ending_narrative: str = ""
+
+class TranslateArchiveListRequest(BaseModel):
+    items: List[ArchiveListItem]
+    target_lang: str = "en"
+
+@app.post("/api/translate_archive_list")
+async def translate_archive_list(req: TranslateArchiveListRequest):
+    if not req.items:
+        return {"items": []}
+    
+    target_name = "English" if req.target_lang == "en" else "Traditional Chinese (繁體中文)"
+    to_translate = [item.dict() for item in req.items]
+    prompt = (
+        f"Translate the following list of game ending records to {target_name}.\n"
+        f"Keep the tone noir, atmospheric, emotional, and poetic.\n"
+        f"Return a JSON object containing a key 'items' which is a list of translated objects with fields 'index', 'ending_title', and 'ending_narrative'.\n\n"
+        f"Items to translate:\n{json.dumps(to_translate, ensure_ascii=False)}"
+    )
+    try:
+        resp = client_studio.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        data = extract_json(resp.text)
+        return {"items": data.get("items", to_translate)}
+    except Exception as e:
+        print(f"[TRANSLATE LIST ERROR] {e}")
+        return {"items": to_translate}
+
+class TranslateArchiveDetailRequest(BaseModel):
+    record: dict
+    target_lang: str = "en"
+
+@app.post("/api/translate_archive_detail")
+async def translate_archive_detail(req: TranslateArchiveDetailRequest):
+    record = req.record
+    if not record:
+        return {}
+    
+    to_translate = {
+        "ending_title": record.get("ending_title", ""),
+        "ending_narrative": record.get("ending_narrative", ""),
+        "ending_retrospective": record.get("ending_retrospective", ""),
+        "history": [
+            {
+                "turn": turn.get("turn", 0),
+                "user_suggestion": turn.get("user_suggestion", ""),
+                "dialogue": turn.get("dialogue", ""),
+                "narration": turn.get("narration", "")
+            }
+            for turn in record.get("history", [])
+        ]
+    }
+    
+    target_name = "English" if req.target_lang == "en" else "Traditional Chinese (繁體中文)"
+    prompt = (
+        f"Translate the following game story record to {target_name}.\n"
+        f"The game style is noir, moody, psychological, and poetic. Translate the descriptions and dialogue accordingly.\n"
+        f"Keep formatting like parentheses and turn numbers intact.\n"
+        f"Return a JSON object of the exact same structure as the input.\n\n"
+        f"Input:\n{json.dumps(to_translate, ensure_ascii=False)}"
+    )
+    try:
+        resp = client_studio.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json")
+        )
+        data = extract_json(resp.text)
+        
+        translated_record = json.loads(json.dumps(record))
+        translated_record["ending_title"] = data.get("ending_title", record.get("ending_title", ""))
+        translated_record["ending_narrative"] = data.get("ending_narrative", record.get("ending_narrative", ""))
+        translated_record["ending_retrospective"] = data.get("ending_retrospective", record.get("ending_retrospective", ""))
+        
+        translated_history = data.get("history", [])
+        orig_history = record.get("history", [])
+        for i, orig_turn in enumerate(orig_history):
+            if i < len(translated_history):
+                tr_turn = translated_history[i]
+                if i < len(translated_record.get("history", [])):
+                    translated_record["history"][i]["user_suggestion"] = tr_turn.get("user_suggestion", orig_turn.get("user_suggestion", ""))
+                    translated_record["history"][i]["dialogue"] = tr_turn.get("dialogue", orig_turn.get("dialogue", ""))
+                    translated_record["history"][i]["narration"] = tr_turn.get("narration", orig_turn.get("narration", ""))
+        
+        return translated_record
+    except Exception as e:
+        print(f"[TRANSLATE DETAIL ERROR] {e}")
+        return record
 
 
 # ============================================================

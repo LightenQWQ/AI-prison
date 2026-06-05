@@ -1,3 +1,187 @@
+// ══════════════════════════════════════════════════
+// 🌐 語言切換系統 (Language System)
+// ══════════════════════════════════════════════════
+window.currentLang = localStorage.getItem('game_lang') || 'zh';
+// 記錄最後一回合的文字，用於切換語言時即時翻譯
+window.lastDisplayedDialogue = '';
+window.lastDisplayedNarration = '';
+
+const TRANSLATIONS = {
+    zh: {
+        // Pre-entry
+        'pre-continue-text': '[ 延續未完的記憶 ]',
+        'pre-enter-text':    '[ 進入夢境 ]',
+        'pre-archive-text':  '[ 查看檔案館 RECORDS ]',
+        // Floating
+        'float-text-1':      '那個聲音⋯⋯',
+        'float-text-2':      '⋯⋯是你，還是我？',
+        // Title
+        'title-continue-text': '[ 延續未完的記憶 ]',
+        'title-start-text':    '[ 深入雨夜 ]',
+        // Game UI
+        'speaker':             '少年',
+        'submit-btn':          '送出',
+        'suggestion-input-placeholder': '在影子的深處，你正想著...',
+        'inventory-label':     '物品：',
+        'inventory-none':      '無',
+        // Lang button (中文模式 → 顯示 English，讓使用者知道可以切過去)
+        'lang-toggle-btn':     'English',
+    },
+    en: {
+        // Pre-entry
+        'pre-continue-text': '[ CONTINUE JOURNEY ]',
+        'pre-enter-text':    '[ ENTER THE DREAM ]',
+        'pre-archive-text':  '[ VIEW RECORDS ]',
+        // Floating
+        'float-text-1':      'That voice...',
+        'float-text-2':      '...is it you, or me?',
+        // Title
+        'title-continue-text': '[ CONTINUE JOURNEY ]',
+        'title-start-text':    '[ INTO THE RAIN ]',
+        // Game UI
+        'speaker':             'The Boy',
+        'submit-btn':          'SEND',
+        'suggestion-input-placeholder': 'In the shadows, you are thinking...',
+        'inventory-label':     'ITEMS: ',
+        'inventory-none':      'NONE',
+        // Lang button (英文模式 → 顯示 中文，讓使用者知道可以切回來)
+        'lang-toggle-btn':     '中文',
+    }
+};
+
+function applyLanguage(lang) {
+    window.currentLang = lang;
+    localStorage.setItem('game_lang', lang);
+    const t = TRANSLATIONS[lang];
+    for (const [id, text] of Object.entries(t)) {
+        if (id === 'suggestion-input-placeholder') {
+            const el = document.getElementById('suggestion-input');
+            if (el) el.placeholder = text;
+        } else if (id === 'inventory-label' || id === 'inventory-none') {
+            // handled separately in updateInventoryDisplay
+        } else {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = text;
+        }
+    }
+    // Update inventory display
+    updateInventoryDisplay();
+    // Update html lang attribute
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-TW';
+    // Apply font style
+    applyLangFont(lang);
+}
+
+
+// ── 英文模式字體切換 ──
+// 中文：Noto Sans TC + EB Garamond
+// 英文：Special Elite（UI）+ Crimson Pro Italic（旁白/對話）
+function applyLangFont(lang) {
+    const dialogueBox = document.getElementById('text-content');
+    const narratorEl  = document.getElementById('narrator-text');
+    const inputEl     = document.getElementById('suggestion-input');
+    const submitEl    = document.getElementById('submit-btn');
+    const speakerEl   = document.getElementById('speaker');
+
+    if (lang === 'en') {
+        // 對話框：Crimson Pro Italic — 優雅且有電影感
+        if (dialogueBox) {
+            dialogueBox.style.fontFamily = "'Crimson Pro', 'EB Garamond', serif";
+            dialogueBox.style.fontStyle  = "italic";
+            dialogueBox.style.fontSize   = "1.35rem";
+            dialogueBox.style.letterSpacing = "0.02em";
+        }
+        // 旁白：Crimson Pro Italic
+        if (narratorEl) {
+            narratorEl.style.fontFamily = "'Crimson Pro', 'EB Garamond', serif";
+            narratorEl.style.fontStyle  = "italic";
+        }
+        // 輸入框 + 按鈕：Special Elite（打字機風格）
+        if (inputEl)   inputEl.style.fontFamily   = "'Special Elite', 'Courier New', monospace";
+        if (submitEl)  submitEl.style.fontFamily   = "'Special Elite', 'Courier New', monospace";
+        if (speakerEl) speakerEl.style.fontFamily  = "'Special Elite', 'Courier New', monospace";
+    } else {
+        // 還原中文字體
+        if (dialogueBox) {
+            dialogueBox.style.fontFamily = "";
+            dialogueBox.style.fontStyle  = "";
+            dialogueBox.style.fontSize   = "";
+            dialogueBox.style.letterSpacing = "";
+        }
+        if (narratorEl) {
+            narratorEl.style.fontFamily = "";
+            narratorEl.style.fontStyle  = "";
+        }
+        if (inputEl)   inputEl.style.fontFamily   = "";
+        if (submitEl)  submitEl.style.fontFamily   = "";
+        if (speakerEl) speakerEl.style.fontFamily  = "";
+    }
+}
+
+async function toggleLanguage() {
+    const newLang = window.currentLang === 'zh' ? 'en' : 'zh';
+    applyLanguage(newLang);
+
+    // 若遊戲進行中，翻譯當前顯示的文字
+    const dialogue  = window.lastDisplayedDialogue;
+    const narration = window.lastDisplayedNarration;
+    if (!dialogue && !narration) return; // 還沒開始遊戲，不需要翻譯
+
+    // 顯示翻譯中提示
+    const narratorEl = document.getElementById('narrator-text');
+    const textContent = document.getElementById('text-content');
+    if (narratorEl) {
+        narratorEl.style.opacity = '0.4';
+        narratorEl.innerText = newLang === 'en' ? '(Translating...)' : '（翻譯中...）';
+        narratorEl.style.display = 'block';
+    }
+
+    try {
+        const res = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dialogue, narration, target_lang: newLang })
+        });
+        const translated = await res.json();
+
+        if (textContent && translated.dialogue) {
+            textContent.innerText = translated.dialogue;
+            window.lastDisplayedDialogue = translated.dialogue;
+        }
+        if (narratorEl && translated.narration) {
+            narratorEl.innerText = translated.narration;
+            narratorEl.style.opacity = '1';
+            window.lastDisplayedNarration = translated.narration;
+        } else if (narratorEl) {
+            narratorEl.style.opacity = '1';
+        }
+    } catch(e) {
+        console.warn('Translation failed:', e);
+        if (narratorEl) narratorEl.style.opacity = '1';
+    }
+}
+
+function updateInventoryDisplay() {
+    const t = TRANSLATIONS[window.currentLang];
+    const invLabel = document.getElementById('inventory-display');
+    const invList = document.getElementById('inventory-list');
+    if (invLabel) {
+        const labelSpan = invLabel.querySelector('span:first-child') || invLabel;
+        // Update label text node
+        if (invLabel.childNodes[0] && invLabel.childNodes[0].nodeType === 3) {
+            invLabel.childNodes[0].textContent = t['inventory-label'];
+        }
+    }
+    if (invList && (!gameState.inventory || gameState.inventory.length === 0)) {
+        invList.innerText = t['inventory-none'];
+    }
+}
+
+// 頁面載入後套用語言設定
+document.addEventListener('DOMContentLoaded', () => {
+    applyLanguage(window.currentLang);
+});
+
 let gameState = {
     trust: 30,
     fear: 40,
@@ -297,11 +481,23 @@ const dreamSequence = [
     "就在這片寂靜的雨聲中，我聽見了一個聲音。"
 ];
 
-const introSequence = [
-    { text: "....", desc: "一位少年，孤身佇立在深夜的巷道盡頭。路燈的光暈在濕地上暈開，像一個沒人回答的問題。", img: "assets/cover_v3.png" },
-    { text: "....", desc: "他不知道自己在等什麼。雨滴打在他的肩膀上，他沒有躲避，就這樣站著。", img: "assets/cover_v3.png" },
-    { text: "....", desc: "你感覺到了他。他的某一部分，正在向外呼喊——儘管他自己還沒有察覺。", img: "assets/cover_v3.png" }
-];
+const INTRO_SEQUENCES = {
+    zh: [
+        { text: "....", desc: "一位少年，孤身佇立在深夜的巷道盡頭。路燈的光暈在濕地上暈開，像一個沒人回答的問題。", img: "assets/cover_v3.png" },
+        { text: "....", desc: "他不知道自己在等什麼。雨滴打在他的肩膀上，他沒有躲避，就這樣站著。", img: "assets/cover_v3.png" },
+        { text: "....", desc: "你感覺到了他。他的某一部分，正在向外呼喊——儘管他自己還沒有察覺。", img: "assets/cover_v3.png" }
+    ],
+    en: [
+        { text: "....", desc: "A boy. Alone at the end of a rain-soaked alley. The lamplight bleeds across the wet stone — an unanswered question.", img: "assets/cover_v3.png" },
+        { text: "....", desc: "He doesn't know what he's waiting for. Rain falls on his shoulders. He doesn't move. He just... stands.", img: "assets/cover_v3.png" },
+        { text: "....", desc: "You sense something in him. A part of him is calling out — even if he hasn't realized it yet.", img: "assets/cover_v3.png" }
+    ]
+};
+// 動態取得目前語言的 intro 序列
+function getIntroSequence() {
+    return INTRO_SEQUENCES[window.currentLang] || INTRO_SEQUENCES.zh;
+}
+const introSequence = getIntroSequence(); // 初始值，startGame 時會重新取
 
 let introIndex = 0;
 let isSkippingPrologue = false;
@@ -460,7 +656,7 @@ async function quickStart() {
     
     updateUI({
         dialogue: "......",
-        narration: "（你直接跳入了這場永恆的雨夜。）",
+        narration: window.currentLang === "en" ? "(You step directly into this eternal rainy night.)" : "（你直接跳入了這場永恆的雨夜。）",
         image_url: "assets/cover_v3.png"
     });
 }
@@ -828,8 +1024,8 @@ function showMemoryFragment(text) {
     el.classList.add('fragment-glitch');
 }
 
-// 預設開場獨白（主角思緒碎片）
-const DEFAULT_MONOLOGUES = [
+// 預設開場獨白（主角思緒碎片）— 雙語版
+const MONOLOGUES_ZH = [
     "這條路..... 我每天都走，可今晚感覺走不完。",
     "不想回家..... 家裡也沒有人在等。",
     "雨聲把什麼都蓋掉了..... 挺好的。",
@@ -837,9 +1033,20 @@ const DEFAULT_MONOLOGUES = [
     "我沒事..... 不，我說謊了。",
     "就算我一直站在這裡，也不會有人發現吧。"
 ];
+const MONOLOGUES_EN = [
+    "This road..... I walk it every day. Tonight it feels endless.",
+    "I don't want to go home..... No one's waiting there anyway.",
+    "The rain drowns everything out..... That's fine.",
+    "Why are you talking to me? Who are you?",
+    "I'm fine..... No. That was a lie.",
+    "Even if I stand here all night, no one would notice."
+];
+function DEFAULT_MONOLOGUES() {
+    return window.currentLang === "en" ? MONOLOGUES_EN : MONOLOGUES_ZH;
+}
 
-// 等待生圖期間的旁白池（每 5 秒輪換）
-const WAITING_NARRATIONS = [
+// 等待生圖期間的旁白池（每 5 秒輪換）— 雙語版
+const WAITING_ZH = [
     "（他的視線停在積水的地面，路燈的倒影在水中顫抖⋯⋯）",
     "（他握緊了口袋裡的手，那裡什麼都沒有，卻很安心⋯⋯）",
     "（他閉上眼，試著讓雨聲蓋過腦子裡那些旋轉的問題⋯⋯）",
@@ -847,6 +1054,17 @@ const WAITING_NARRATIONS = [
     "（他知道你在那裡。他假裝不知道⋯⋯）",
     "（他深吸一口氣，雨水的氣味混著鐵鏽，讓他清醒了一秒⋯⋯）"
 ];
+const WAITING_EN = [
+    "(His gaze drifts to the pooled water below. The lamplight trembles in the reflection...)",
+    "(He tightens his fist inside his pocket. Nothing there. But it helps...)",
+    "(He shuts his eyes, lets the rain drown out the thoughts spinning in his head...)",
+    "(He remembers someone. Then pushes that name away immediately...)",
+    "(He knows you're there. He pretends not to...)",
+    "(He breathes in — rain and rust. It pulls him back for just a second...)"
+];
+function WAITING_NARRATIONS() {
+    return window.currentLang === "en" ? WAITING_EN : WAITING_ZH;
+}
 
 function toggleDebug() {
     const panel = document.getElementById('debug-panel');
@@ -939,7 +1157,7 @@ async function sendSuggestion() {
     fetch('/api/thought', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ suggestion: text })
+        body: JSON.stringify({ suggestion: text, language: window.currentLang })
     }).then(res => res.json()).then(data => {
         if (data.thought && data.thought !== "⋯⋯") {
             currentThought = data.thought;
@@ -950,7 +1168,7 @@ async function sendSuggestion() {
         const response = await fetch('/api/suggest', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ suggestion: text, state: gameState })
+            body: JSON.stringify({ suggestion: text, state: gameState, language: window.currentLang })
         });
         const data = await response.json();
         if (data.error) {
@@ -986,13 +1204,14 @@ async function sendSuggestion() {
 
             // --- 第一幕：旁白打字機效果 ---
             const narrationText = data.narration || '';
+            window.lastDisplayedNarration = narrationText; // 記錄當前旁白
             narratorEl.innerText = '';
             narratorEl.style.display = 'block';
             narratorEl.style.opacity = '1';
             narratorEl.classList.add('typing');
 
             // 用 Promise 包住打字機，便於等待
-            const CHAR_SPEED = 60; // ms/字，可調快慢
+            const CHAR_SPEED = window.currentLang === 'en' ? 30 : 60; // 英文 2x 速（30ms），中文原速（60ms）
             const typingDone = new Promise(resolve => {
                 if (!narrationText) { resolve(); return; }
                 let i = 0;
@@ -1052,6 +1271,8 @@ async function sendSuggestion() {
                 const dialogueText = data.dialogue || '......';
                 textContent.innerText = dialogueText;
                 textContent.classList.remove('hidden-for-reveal');
+                // 記錄當前顯示的文字（用於語言切換時即時翻譯）
+                window.lastDisplayedDialogue = dialogueText;
 
                 // 新圖片登場（移除模糊，清晰淡入）
                 if (sceneImageEl) sceneImageEl.classList.remove('blurring-out');
