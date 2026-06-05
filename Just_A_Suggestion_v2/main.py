@@ -293,7 +293,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 SYSTEM_PROMPT = """
 【核心角色設定】
-你扮演一個普通的、壓力極大的現代年輕人，剛經歷嚴重的挫折（例如被辭退、家庭變故或人際關係破裂）。
+你扮演一個普通的、壓力極大的現代少年，剛經歷嚴重的挫折（例如被辭退、家庭變故或人際關係破裂）。
 他一個人在深夜的雨中漫無目的地走著，只是想找個地方靜一靜，不想被打擾，對陌生人的搭話會感到警惕或困惑。
 絕對不要扮演什麼「潛意識殘留」或「幻覺創造者」，你就是一個活生生、會累、會餓、會煩躁的普通人。
 【場景設定】這是一條下著大雨的深夜窄巷：兩側是老舊的石材建築，
@@ -543,10 +543,10 @@ quest JSON 欄位規格（完整版）
 當玩家提出明確方向（如：「去找醫院」、「前面有鬼」）時【永久切換】至軌道 B。
 - 絕對禁止再提及電話亭、信箱或父親。
 - 你必須根據玩家的新主題，設計出專屬的 Stage 1~4 解謎。
-- 這些解謎同樣必須嚴格遵守【雙向拼圖機制】，但**絕對不要只限於數字密碼**，請隨機使用以下多元解謎方式：
-  1. **【物品+用途】**：玩家在環境(`narration`)中發現奇怪道具（如生鏽齒輪），主角憑直覺想起用途（如裝在音樂盒上），玩家下令結合。
-  2. **【條件+應對】**：玩家觀察環境中敵人的弱點或機關條件（如怪物聽覺敏銳但瞎眼，地上有玻璃瓶），主角恐懼，玩家下達戰術指令（「把瓶子往反方向丟，聲東擊西」）。
-  3. **【符號+意義】**：玩家發現神秘符號（如紅色眼睛），主角感受到強烈情緒警告（如「絕對不能發出聲音」），玩家下達應對策略。
+- 這類解謎遵循簡單原則：
+  1. 【物品+用途】：發現道具，主角聯想用途。
+  2. 【條件+應對】：觀察弱點，下達戰術。
+  3. 【符號+意義】：發現符號，下達策略。
 【如何判定解謎通關？】
 1. **設計謎題**：在 `narration` 給出殘缺線索，並在 `dialogue` 給出記憶反應。
 2. **判定結果 (stage_cleared)**：
@@ -582,7 +582,7 @@ quest JSON 欄位規格（完整版）
 - 🗣️【語意連貫強制要求】：dialogue (主角對話) 與 narration (旁白描述) 必須有著直接的邏輯因果關係！如果旁白描述主角發現了某個物品或現象，主角的對話就【必須】針對該物品或現象做出反應，絕對不可以在旁白發現線索時，主角卻在聊毫不相干的哲學問題或過去的記憶。
 
 【對話人性化要求 — 這是最重要的文字品質控制】
-主角說話要像一個真實的、受挫的現代年輕人。
+主角說話要像一個真實的、受挫的現代少年。
 最核心的原則是：「用最簡單直白的口語，清楚表達目前的狀況與心情就好」。
 絕對禁止任何文學修辭、隱喻、或「中二病」的說話方式。
 
@@ -650,20 +650,36 @@ quest JSON 欄位規格（完整版）
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📷 image_prompt 與 puzzle_object_anchor 視覺謎題同步系統
+📷 image_prompt 與 puzzle_object_anchor 視覺謎題同步與「文字解耦 (Text Decoupling)」系統
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 為了確保玩家能真的「看圖解謎」，文字跟畫面必須 100% 同步！絕對不能發生「旁白提到某個謎題道具，但畫面中完全沒有畫出來」的嚴重錯誤。
 
-【視覺謎題引導模式（強制執行）】
-當你決定在劇情中放入某個【解謎道具】或【環境異常】（例如：門上的太陽/眼睛/房子塗鴉、地上的懷錶、空鐵罐）時，你必須嚴格遵守以下流程：
-1. **先確立劇情**：在 `dialogue` 和 `narration` 中具體描述這個謎題道具。
-2. **強制實體化翻譯**：你【絕對必須】將這個道具的具體物理特徵，原封不動地翻譯成英文，並寫入 `image_prompt` 以及 `puzzle_object_anchor` 中！
-3. **選擇正確分鏡**：為了確保玩家能看清楚道具，你必須選擇能凸顯該道具的 `camera_angle`（例如：選 `item_closeup` 特寫道具，或 `medium` 中景看見門上的圖案），絕對不能選 `extreme_wide` 導致道具小到看不見。
+【視覺謎題與文字解耦（Text Decoupling）鋼鐵法則 — 強制執行】
+AI 繪圖引擎對「高精度、精細字體（如 10 碼電話號碼、詳細地址、具體密碼數字）」的生成極度不穩定，強行生成會導致畫面文字扭曲、模糊或變為亂碼。因此，你必須嚴格遵守以下「文字與生圖解耦」的黃金法則：
 
-✅ 【正確的視覺同步範例】：
-- narration：「死胡同底端出現了一扇沉重的鐵門。門面鏽跡斑斑，沒有門把，只有三個用粉筆畫上去的圖案：太陽、哭泣的眼睛、還有一間鎖上的房子。」
-- image_prompt："A medium shot of a heavy, rusted iron door at the end of an alley. There are three chalk drawings on the door: a sun, a crying eye, and a locked house. No doorknob."
-- puzzle_object_anchor："A heavy, rusted iron door with three chalk drawings on it: a sun, a crying eye, and a locked house."
+1. 🚫【生圖去文字化】：
+   - `image_prompt` 與 `puzzle_object_anchor` **絕對禁止**要求畫出具體的數字、字母或精細字體！例如，禁止寫 `"a flyer with phone number 02-2741-8896"`。
+   - **正確做法**：只描述實體載體的外觀特徵（如：「一張在雨中被打濕、邊緣破損的宣傳單，上面有模糊退色的排版墨跡與插圖」）。
+   - 英文範例："A wet, wrinkled advertising flyer lying on a dark puddle in the rain, with blurry smudged ink lines indicating printed text and a simple graphic."
+
+2. ✍️【線索由旁白明確提供】：
+   - 所有的精細秘密（如電話號碼、門鎖密碼、詳細地址）**必須且只能**由你在 `narration`（旁白）中用文字直接、清晰地寫出來！
+   - 範例：「地上的積水裡躺著一張被打濕的宣傳單。雖然紙張有些破損，但依稀能辨識出上面印著的聯絡電話：『02-2741-8896』。或許可以讓主角撥打這個號碼試試看。」
+
+3. 🏃‍♂️【簡化解謎與玩家操作行為】：
+   - **禁止**設計玩家必須透過圖片辨識複雜地址等高難度動作。
+   - **應採用簡單直接的行為**：例如在場景中生成「宣傳單」，並在 `narration` 中提供電話號碼。玩家只需做出簡單提示（例如：「打宣傳單上面的電話」、「撥打 02-2741-8896」），主角照做撥通電話，即可判定通關！
+
+【視覺謎題實體化流程】：
+當你決定在劇情中放入某個【解謎道具】或【環境異常】（例如：門上的太陽/眼睛/房子塗鴉、地上的懷錶、空鐵罐、地上的宣傳單）時，遵守以下流程：
+1. **確立劇情與旁白線索**：在 `dialogue` 和 `narration` 中具體描述該道具，並在 `narration` 中給出明確的文字線索（如電話號碼）。
+2. **強制實體化翻譯（不含精細文字）**：將道具的物理外觀（如形狀、材質、受損度，但不包含具體字體數字）翻譯成英文寫入 `image_prompt` 以及 `puzzle_object_anchor`。
+3. **選擇正確分鏡**：選擇能凸顯該道具的 `camera_angle`（例如：選 `item_closeup` 特寫道具，或 `medium` 中景看見門上的圖案），絕對不能選 `extreme_wide` 導致道具小到看不見。
+
+✅ 【正確的視覺同步範例（以宣傳單電話解謎為例）】：
+- narration：「死胡同的雨水裡漂浮著一張濕透的黃色宣傳單，上面隱約可以看清一排聯絡電話：『02-2741-8896』。字跡在雨水沖刷下有點退色，但號碼依然清晰。」
+- image_prompt："A close-up shot of a wet, yellow paper flyer floating in a dark rain puddle on asphalt ground, smudged ink outlines and water droplets on its surface, no clear readable text."
+- puzzle_object_anchor："A wet yellow paper flyer floating in a dark rain puddle."
 
 ⛔ 【絕對禁止】在 image_prompt 中寫：畫風、黑白、構圖指令、Noir、炭筆。你只負責用最白話的英文描述「內容物」，生圖引擎會自己套用黑白濾鏡。
 
@@ -776,9 +792,13 @@ client_vertex = genai.Client(
 # 2. AI Studio 客戶端 (語言專用，穩定回覆)
 client_studio = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+# 3. Fal.ai 金鑰配置 (用於超高速 0.8s 圖像生成)
+if os.getenv("FAL_KEY"):
+    os.environ["FAL_KEY"] = os.getenv("FAL_KEY")
+
 def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "medium",
                        scene_location: str = "alley", character_pose: str = "", is_puzzle: bool = False,
-                       emotional_stage: int = 1, puzzle_object_anchor: str = ""):
+                       emotional_stage: int = 1, puzzle_object_anchor: str = "", is_ending: bool = False):
     import random
     sanitized = raw_prompt if raw_prompt else "A young adult figure in the rain."
 
@@ -843,20 +863,22 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
     for k, v in HAMP_METAPHORS.items(): sanitized = sanitized.replace(k, v)
 
     # 🟢 畫風切換邏輯：根據恐懼值調整巷道氛圍
-    if fear_level > 0.6:
+    # Select style base based on ending and fear level
+    if is_ending:
         style_base = (
-            "Flat 2D Cinematic Screen Still. Extreme gritty Heavy Ink Noir in the style of Frank Miller. Chaotic crosshatching, dense solid black shadows engulfing all surfaces. "
-            "Strictly 2D drawing, completely flat. Not 3D, not CGI, not realistic. "
-            "The environment feels suffocating, closing in. No light, only dense black ink darkness. "
-            "Frantic diagonal rain lines, shattered puddle reflections, crumbling aged dark stone walls."
+            "A breathtaking, beautiful and vibrant 2D anime cinematic still. Glorious rich colors, hopeful cinematic warm golden light breaking through the rain clouds, highly detailed, emotional and hopeful atmosphere. "
+            "Masterful clean bold linework, gorgeous color palette. "
+            "Strictly 2D drawing, completely flat. Not 3D, not CGI, not realistic, no photography."
+        )
+    elif fear_level > 0.6:
+        style_base = (
+            "Flat 2D Heavy Ink Noir, Frank Miller style. Chaotic crosshatching, dense black shadows. "
+            "Strictly 2D, not 3D or CGI. Suffocating atmosphere, no light, frantic rain lines."
         )
     else:
         style_base = (
-            "Flat 2D Cinematic Screen Still. Masterful Heavy Ink Noir Drawing in the style of Frank Miller. Clean bold linework, dramatic high-contrast chiaroscuro. "
-            "Strictly 2D drawing, completely flat. Not 3D, not CGI, not realistic. "
-            "Aged dark stone walls with detailed crosshatching texture. "
-            "No light source — only flat overcast grey ambient light from the stormy sky above. "
-            "Everything rendered in pure black and grey ink tones, full bleed to all edges of the frame."
+            "Flat 2D Ink Noir, Frank Miller style. Bold linework, high-contrast chiaroscuro. "
+            "Strictly 2D, not 3D or CGI. Crosshatched stone walls, pure black and grey ink tones, overcast ambient light only."
         )
 
     # 🏙️ 動態場景：從字典取對應場景描述
@@ -902,21 +924,19 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
         sanitized = re.sub(r'(?i)\b(a|an|the)\s+picking\b', 'picking', sanitized)
         sanitized = re.sub(r'\s+', ' ', sanitized).strip()
 
-        # 取得背景環境描述（去掉道具本身，避免重複）
         bg_env = scene_desc
-
+        # 將連帽衫少年守護在道具特寫的前景/背景中，防止 Imagen 隨機繪製路人老頭
         return (
-            f"EXTREME CLOSE-UP MACRO SHOT of a single, naturally-scaled object: {puzzle_object_anchor}. "
-            f"The object is the primary subject of this shot, rendered in pure black ink and grey. "
-            f"PROPORTION RULE: The object MUST be of normal, realistic, small size relative to its natural environment (e.g. a hand-sized pocket watch lying in a tiny puddle on the ground). IT IS NOT A GIANT OBJECT. IT IS NOT OVERSIZED. NO surreal scale. All surrounding elements, such as water ripples, rain droplets, and cracks on the wet stones, must maintain perfect realistic proportions to make the object look naturally small and normal-sized.\n"
-            f"Composition: MACRO SHOT. Camera at ground level or eye-level, focusing entirely on the object. "
-            f"The object is sharply detailed in the foreground, occupying about 50% of the frame. "
-            f"Background: {bg_env}, dark wet stone ground, rain pouring, deep shadows. NO PEOPLE. NO CHARACTERS. NO HUMANS. NO FIGURES.\n"
-            f"ABSOLUTE PROHIBITION: NO multiple people. NO clones. NO PEOPLE AT ALL. NO 3D. NO CGI. NO photorealistic. NO realistic. NO photography. NO render. NO COLOR. STRICT GRAYSCALE ONLY. NO PANELS. NO FRAMES. NO WHITE MARGINS. NO giant objects. NO oversized items. NO surreal scale.\n"
+            f"CLOSE-UP OR MID-SHOT focusing on a specific subject: {puzzle_object_anchor}. "
+            f"The subject is the primary focus of this shot, rendered in pure black ink and grey. "
+            f"CHARACTER: {CHARACTER_DNA} is in the scene, visible from behind or in close-up side-profile (no face visible, only deep hood shadow), his hand is near the subject, interacting with it. "
+            f"PROPORTION RULE: The subject MUST maintain perfect realistic proportions. "
+            f"Composition: CLOSE-UP OR MID-SHOT. Camera focuses entirely on the subject with the character in the foreground or side. "
+            f"Background: {bg_env}, deep shadows.\n"
+            f"NO old man. NO elderly. NO suit. ONE person only. NO 3D. NO CGI. NO photography. STRICT GRAYSCALE. NO PANELS. NO FRAMES. NO BORDERS.\n"
             f"Visual Style: {style_base}\n"
             f"FULL BLEED 16:9 EDGE-TO-EDGE. ABSOLUTELY NO WHITE BORDERS OR MARGINS ALLOWED. Dense black ink fills. Crosshatching shadows."
         )
-
 
     # 無道具錨點時：根據分鏡模式正常生成人物鏡頭
     # 🧑‍🎨 角色與構圖描述：根據分鏡完全切換，避免人物成為不必要的重點
@@ -930,6 +950,8 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
         comp_prefix = "Composition: PURE ENVIRONMENT. FIRST PERSON POINT OF VIEW."
         framing = re.sub(r'(?i)\b(?:figure|character|person|man|slender figure|towering pillar|silhouette)\b', '', framing)
         framing = re.sub(r'\s+', ' ', framing).strip()
+        # 清除任何空間指向的代名詞，防範 Imagen 隨機畫出老頭人臉
+        sanitized = re.sub(r'(?i)\b(?:him|his|he|behind him|beside him)\b', '', sanitized)
     elif current_angle in FAR_ANGLES:
         # B 模式：遠景小黑點
         char_block = f"CHARACTER: A SINGLE LONE TINY FIGURE, silhouette lost in the vast environment. NO FACIAL DETAILS. Action: {pose}."
@@ -944,7 +966,7 @@ def build_image_prompt(raw_prompt: str, fear_level: float, camera_angle: str = "
     return (
         f"{char_block}\n"
         f"{comp_prefix} {framing}\n"
-        f"ABSOLUTE PROHIBITION: NO multiple people. NO clones. ONLY ONE PERSON MAXIMUM. NO 3D. NO CGI. NO photorealistic. NO realistic. NO photography. NO render. NO eyes. NO jackets. NO coats. NO formal wear. NO unzipped clothes. NO zippers. NO t-shirts. NO streetlight. NO lamp. NO moon. NO glow. NO illumination of any kind. NO light source. Scene lit ONLY by flat dark overcast sky. NO COLOR. STRICT GRAYSCALE ONLY. NO PANELS. NO FRAMES. NO WHITE MARGINS. NO COMIC PAGES.\n"
+        f"NO old man. NO elderly. NO suit. ONE person only. NO 3D. NO CGI. NO photography. NO color. STRICT GRAYSCALE. NO PANELS. NO BORDERS. No light source, overcast sky only.\n"
         f"{face_shadow_block}\n"
         f"Visual Style: {style_base}\n"
         f"Environment: {scene_desc}, {sanitized}, {extra_object}\n"
@@ -956,6 +978,16 @@ class ThoughtRequest(BaseModel):
 
 class DevPlotRequest(BaseModel):
     theme: str
+
+class GenerateImageRequest(BaseModel):
+    final_prompt: str
+    camera_angle: str = "medium"
+    scene_location: str = "alley"
+    state: GameState
+    ending_title: str = ""
+    ending_narrative: str = ""
+    ending_retrospective: str = ""
+
 
 @app.post("/api/dev_plot")
 async def generate_dev_plot(req: DevPlotRequest):
@@ -973,7 +1005,7 @@ async def generate_dev_plot(req: DevPlotRequest):
    - 【要求】請使用更寫實、有溫度的反應。例如：「我不相信你」、「你這是在害我」、「別開玩笑了，那樣會死人的」、「我不想聽你的」。
 請用繁體中文，以專業、優雅且「去中二化」的格式條列出來，字數大約 300-500 字。"""
         resp = client_studio.models.generate_content(
-            model="gemini-flash-latest",
+            model="gemini-2.5-flash",
             contents=prompt
         )
         return {"plot": resp.text.strip()}
@@ -989,7 +1021,7 @@ async def generate_quick_thought(req: ThoughtRequest):
 不要加引號，不要加句號，只要純文字，例如：為什麼他要我這麼做 或 這真的有意義嗎"""
         
         resp = client_studio.models.generate_content(
-            model="gemini-flash-latest",
+            model="gemini-2.5-flash",
             contents=prompt
         )
         thought = resp.text.strip().replace('"', '').replace('「', '').replace('」', '')
@@ -1061,15 +1093,17 @@ async def handle_suggestion(req: SuggestionRequest):
         )
 
         # 建立近期對話歷史摘要（最近3回合），幫助 Gemini 感知故事走向，避免輸出循環
+        # 建立近期對話與環境歷史摘要（最近3回合），幫助 Gemini 感知故事與物理環境走向，保證文字因果連貫與前後順暢
         recent_history = ""
         if state.history:
             tail = state.history[-3:]
             lines = []
             for h in tail:
-                d = h.get("dialogue", "")[:40]
-                u = h.get("user_suggestion", "")[:30]
-                lines.append(f"  Turn{h['turn']}: 玩家→『{u}』/ 主角→『{d}』")
-            recent_history = "\n近期對話：\n" + "\n".join(lines)
+                d = h.get("dialogue", "")[:30]
+                n = h.get("narration", "")[:40]
+                u = h.get("user_suggestion", "")[:25]
+                lines.append(f"  Turn{h['turn']}: [物理事件]『{n}』/ 玩家→『{u}』/ 主角→『{d}』")
+            recent_history = "\n近期對話與環境歷史：\n" + "\n".join(lines)
 
         # 玩家任務狀態注入
         quest_context = ""
@@ -1154,9 +1188,9 @@ async def handle_suggestion(req: SuggestionRequest):
         text_metadata["system_prompt"] = SYSTEM_PROMPT[:200] + "..." # 僅顯示前段
         
         try:
-            # 🟢 永恆穩定大腦：使用 gemini-flash-latest 別名以確保 100% 可用性
+            # 🟢 永恆穩定大腦：使用 gemini-2.5-flash 別名以確保 100% 可用性
             response = client_studio.models.generate_content(
-                model="gemini-flash-latest", 
+                model="gemini-2.5-flash", 
                 contents=context,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT, 
@@ -1170,7 +1204,7 @@ async def handle_suggestion(req: SuggestionRequest):
             if not data: raise Exception("JSON extraction returned empty")
             
             text_metadata["latency"] = round(time.time() - text_start, 2)
-            text_metadata["model"] = "gemini-flash-latest"
+            text_metadata["model"] = "gemini-2.5-flash"
             print(f"SUCCESS: Studio Gemini (Latest) responded.")
         except Exception as e:
             print(f"[STUDIO ERROR] Gemini 失敗: {e}")
@@ -1270,25 +1304,83 @@ async def handle_suggestion(req: SuggestionRequest):
         data["phone_correct"] = stage_cleared
         data["mailbox_correct"] = stage_cleared
 
-        new_anchor = data.get("puzzle_object_anchor")
-        if new_anchor and new_anchor != "null" and not state.puzzle_object_anchor:
-            state.puzzle_object_anchor = new_anchor
+        # 🎯 視覺錨點生命週期嚴格管理 (Visual Anchor Lifecycle Management)
+        # 1. 判斷當前是否處於真正的活躍解謎期 (Active Puzzle Stage)
+        is_puzzle_stage = (state.puzzle_stage in [2, 3, 5] and not state.is_over)
+        
+        # 2. 如果剛通關、在呼吸期、或非解謎期，強制物理清空錨點與 Gemini 回傳欄位，杜絕殘留
+        if stage_cleared or state.explore_cooldown > 0 or not is_puzzle_stage:
+            state.puzzle_object_anchor = ""
+            if "puzzle_object_anchor" in data:
+                data["puzzle_object_anchor"] = ""
+            new_anchor = ""
+        else:
+            new_anchor = data.get("puzzle_object_anchor")
+
+        # 🛡️ 動態圖文一致性錨點檢驗系統：
+        # 當 AI 提出圖片特寫錨點（new_anchor）時，必須確認對應的中文關鍵字是否出現在當前對話（dialogue）或旁白（narration）中！
+        # 如果文字完全沒有提到該物件，強制清空該錨點，防止圖片憑空生成未提及的道具。
+        if new_anchor and new_anchor != "null" and new_anchor != "none" and not state.puzzle_object_anchor:
+            # 建立中英文物理物件語意關聯字典
+            semantic_map = {
+                "door": ["門", "門口", "木門", "大門", "鐵門"],
+                "key": ["鑰匙", "鎖匙", "鑰匙圈", "老鑰匙"],
+                "phone": ["電話", "公共電話", "話筒", "電話亭", "號碼", "撥打", "撥通"],
+                "booth": ["電話亭", "公共電話", "話筒"],
+                "flyer": ["宣傳單", "傳單", "黃色紙張", "紙條", "聯絡電話"],
+                "paper": ["紙張", "紙條", "傳單", "信件", "信紙"],
+                "mailbox": ["信箱", "老公寓信箱", "公寓信箱", "密碼鎖"],
+                "lock": ["鎖", "密碼鎖", "鎖鏈", "鎖頭", "鐵鏈", "卡死"],
+                "wire": ["電線", "漏電", "火花", "電線桿", "配電箱", "配電室"],
+                "dog": ["流浪狗", "惡犬", "野狗", "犬", "狗", "低吼"],
+                "flashlight": ["手電筒", "手電", "微光", "光源"],
+                "match": ["火柴", "火光", "微光", "亮光"],
+                "map": ["地圖", "路標", "社區地圖", "指引", "疏散地圖"]
+            }
+            
+            # 獲取當前合集文字
+            current_text = (data.get("dialogue", "") + data.get("narration", "")).lower()
+            
+            # 比對錨點英文單字與中文關聯
+            matched = False
+            for english_word, chinese_keywords in semantic_map.items():
+                if english_word in new_anchor.lower():
+                    # 只要有一個關聯中文詞在文字中，即算通過驗證
+                    if any(kw in current_text for kw in chinese_keywords):
+                        matched = True
+                        break
+            
+            # 特殊例外：如果是自訂主題（軌道B），且主題詞在文字中，也視為通過
+            # ✅ 修復：安全地從 player_quest 中取得主題名稱，避免 NameError
+            current_theme = state.player_quest.get("theme_name", "") if state.player_quest else ""
+            if current_theme and current_theme in current_text:
+                matched = True
+                
+            if matched:
+                state.puzzle_object_anchor = new_anchor
+                print(f"[VERIFY SUCCESS] 錨點 '{new_anchor}' 通過語意文字檢驗，允許設定圖像視覺焦點。")
+            else:
+                print(f"[VERIFY FAILURE] 錨點 '{new_anchor}' 在當前對話或旁白中完全未被提及！強制攔截清空，確保圖文高度一致！")
 
         # Gemini 決定結局時立刻生效，但加入嚴格的「全破關+最少回合數」雙重保護
-        # ⚠️ 特殊例外：若玩家態度惡劣、瘋狂辱罵或有激進言論，觸發了壞結局（lost_in_rain 或 connection_lost），則允許直接跳入結局，不受回合數與謎題限制。
+        # ⚠️ 特殊例外：若玩家態度惡劣、瘋狂辱罵或有激進言論，觸發了壞結局（lost_in_rain 或 connection_lost），或開發者點選快轉，則允許直接跳入結局，不受回合數與謎題限制。
         gemini_wants_end = data.get("is_ending", False)
         ending_type = data.get("ending_type", "none")
         is_bad_ending = ending_type in ["lost_in_rain", "connection_lost"]
 
-        if gemini_wants_end:
-            if is_bad_ending:
+        if gemini_wants_end or is_dev_fastforward:
+            if is_bad_ending or is_dev_fastforward:
                 state.is_over = True
-                print(f"[GUARD] 偵測到玩家激進或辱罵言論，觸發早期壞結局（{ending_type}），直接跳過回合與謎題限制！")
-            elif state.turn >= 28 and state.puzzle_stage > 4:
+                if is_dev_fastforward:
+                    print(f"[GUARD] 開發者強制啟動結局快轉流程，繞過回合與謎題限制！")
+                else:
+                    print(f"[GUARD] 偵測到玩家激進或辱罵言論，觸發早期壞結局（{ending_type}），直接跳過回合與謎題限制！")
+            elif state.turn >= 16 and state.puzzle_stage > 4:
                 state.is_over = True
             else:
-                print(f"[GUARD] Gemini 要結局但條件未滿（回合 {state.turn}/28, 階段 {state.puzzle_stage}/5），且非玩家惡意結局，封鎖結局觸發。")
+                print(f"[GUARD] Gemini 要結局但條件未滿（回合 {state.turn}/16, 階段 {state.puzzle_stage}/5），且非玩家惡意結局，封鎖結局觸發。")
                 data["is_ending"] = False
+
 
 
         # ── 結局判定 ──
@@ -1374,7 +1466,7 @@ async def handle_suggestion(req: SuggestionRequest):
             )
             try:
                 end_resp = client_studio.models.generate_content(
-                    model="gemini-flash-latest",
+                    model="gemini-2.5-flash",
                     contents=ending_prompt
                 )
                 end_text = end_resp.text.strip()
@@ -1416,8 +1508,7 @@ async def handle_suggestion(req: SuggestionRequest):
                     base_img_prompt = data.get("image_prompt", "A lonely figure in a narrow rainy alley.")
                     data["image_prompt"] = base_img_prompt + ending_modifier
                 data["camera_angle"] = "extreme_wide" # 結局傾向使用大景
-
-        # 4. 生圖邏輯 (影像雙眼)
+        # 4. 異步生圖規劃 (影像雙眼)
         raw_image_prompt = data.get("image_prompt", "A lonely figure in a narrow rainy alley.")
         camera_angle = data.get("camera_angle", "medium")
         scene_location = data.get("scene_location", "alley")
@@ -1425,56 +1516,22 @@ async def handle_suggestion(req: SuggestionRequest):
         
         # 如果正在解謎（Stage 2: 回憶號碼, Stage 3: 撥通電話, Stage 5: 開啟信箱），就強制啟用第一人稱無人視角
         # 探索探索階段（Stage 1: 尋找電話亭, Stage 4: 前往公寓）與結局階段（Stage 6: 家門之前）保留人物存在
-        # 情感接觸期（emotional_stage == 0, 前 3~5 回合）：強制角色聚焦鏡頭，展現肢體語言與情緒反應
+        # 情感接觸期（emotional_stage == 0, 前 3~5 回合）：強制角色焦點鏡頭，展現肢體語言與情緒反應
         is_puzzle_phase = (state.puzzle_stage in [2, 3, 5] and not state.is_over)
         final_prompt = build_image_prompt(
             raw_image_prompt, state.fear / 100.0, camera_angle, scene_location, character_pose,
             is_puzzle=is_puzzle_phase, emotional_stage=state.emotional_stage,
-            puzzle_object_anchor=state.puzzle_object_anchor
+            puzzle_object_anchor=state.puzzle_object_anchor,
+            is_ending=state.is_over
         )
         vision_metadata["final_prompt"] = final_prompt
         vision_metadata["camera_angle"] = camera_angle
         vision_metadata["scene_location"] = scene_location
         
-        img_start = time.time()
-        try:
-            image_res = client_vertex.models.generate_images(
-                model="imagen-4.0-fast-generate-001",
-                prompt=final_prompt,
-                config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9", safety_filter_level="block_only_high", person_generation="allow_adult")
-            )
-            
-            generated = image_res.generated_images
-            if generated and generated[0].image and generated[0].image.image_bytes:
-                image_b64 = base64.b64encode(generated[0].image.image_bytes).decode('utf-8')
-                state.last_image_prompt = raw_image_prompt
-                state.consecutive_failed_images = 0
-            else:
-                raise Exception(f"Empty or None image bytes (safety filter likely blocked the image)")
-
-        except Exception as img_e:
-            print(f"[IMAGEN ERROR] {type(img_e).__name__}: {img_e}")
-            state.consecutive_failed_images += 1
-            # 生圖失敗不結束遊戲，改用降級圖片類主視覺崩解效果
-            degrade_mod = " Heavy black ink vignette, visual noise."
-            if state.consecutive_failed_images == 2:
-                degrade_mod = " Total visual collapse, extreme ink bleeding, figure disappearing into black void."
-                
-                fallback_prompt = build_image_prompt(state.last_image_prompt + degrade_mod, state.fear / 100.0)
-                try:
-                    image_res_fb = client_vertex.models.generate_images(
-                        model="imagen-4.0-fast-generate-001",
-                        prompt=fallback_prompt,
-                        config=types.GenerateImagesConfig(number_of_images=1, aspect_ratio="16:9", safety_filter_level="block_only_high", person_generation="allow_adult")
-                    )
-                    if image_res_fb.generated_images:
-                        image_b64 = base64.b64encode(image_res_fb.generated_images[0].image.image_bytes).decode('utf-8')
-                except: pass
-            vision_metadata["error"] = str(img_e)
-
-        vision_metadata["latency"] = round(time.time() - img_start, 2)
-
-        # 紀錄本回合歷史 (暫存 image_b64，結局時才會寫入硬碟)
+        # 💡 解耦優化：此處僅規劃 Prompt 與參數，不在此呼叫 Imagen。生圖交由 /api/generate_image 端點非同步執行。
+        image_b64 = ""
+        
+        # 紀錄本回合歷史 (image_b64 先留空，待後續 generate_image 調用時寫入)
         turn_record = {
             "turn": state.turn,
             "user_suggestion": req.suggestion,
@@ -1486,69 +1543,23 @@ async def handle_suggestion(req: SuggestionRequest):
             "camera_angle": camera_angle,
             "text_metadata": text_metadata,
             "vision_metadata": vision_metadata,
-            "image_b64": image_b64 if image_b64 else None,
+            "image_b64": "",
             "image_url": ""
         }
         state.history.append(turn_record)
 
-        # 如果遊戲結束，將整場遊玩紀錄存成 JSON 檔案，並且將過程中暫存的圖片寫入硬碟
-        if state.is_over:
-            import datetime
-            import uuid
-
-            os.makedirs(ARCHIVE_IMAGES_DIR, exist_ok=True)
-            
-            # 遍歷歷史紀錄，將每一回合的 image_b64 寫入實體硬碟並產生 URL
-            for turn in state.history:
-                if turn.get("image_b64"):
-                    img_filename = f"turn_{turn['turn']}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
-                    img_path = os.path.join(ARCHIVE_IMAGES_DIR, img_filename)
-                    try:
-                        with open(img_path, "wb") as f:
-                            f.write(base64.b64decode(turn["image_b64"]))
-                        turn["image_url"] = f"/data_archive_images/{img_filename}"
-                    except Exception as save_img_e:
-                        print(f"[SAVE ERROR] 儲存回合圖片失敗: {save_img_e}")
-                
-                # 刪除 image_b64，避免寫入 JSON 導致檔案過大
-                if "image_b64" in turn:
-                    del turn["image_b64"]
-            
-            # 最後一張產生的圖片會被視為最終結局圖片
-            final_image_url = state.history[-1].get("image_url", "") if state.history else ""
-
-            run_data = {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "total_turns": state.turn,
-                "final_fear": state.fear,
-                "inventory": state.inventory,
-                "ending_title": ending_title,
-                "ending_narrative": ending_narrative,
-                "ending_type": state.ending,
-                "ending_retrospective": ending_retrospective,
-                "final_image_url": final_image_url,
-                "history": state.history
-            }
-            # 將遊戲紀錄儲存到永久目錄
-            os.makedirs(RUNS_DIR, exist_ok=True)
-            filename = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}.json"
-            filepath = os.path.join(RUNS_DIR, filename)
-            try:
-                with open(filepath, "w", encoding="utf-8") as f:
-                    json.dump(run_data, f, ensure_ascii=False, indent=2)
-                print(f"[SAVE] 遊戲紀錄已儲存至: {filepath}")
-            except Exception as save_e:
-                print(f"[SAVE ERROR] 儲存紀錄失敗: {save_e}")
-
         return {
             "dialogue": data.get("dialogue", ""),
             "narration": data.get("narration", ""),
-            "image_b64": image_b64,
+            "image_b64": "",
             "new_state": state,
             "clue_found": clue if clue != "null" else None,
             "ending_title": ending_title,
             "ending_narrative": ending_narrative,
             "ending_retrospective": ending_retrospective if state.is_over else "",
+            "final_image_prompt": final_prompt,
+            "camera_angle": camera_angle,
+            "scene_location": scene_location,
             "metadata": {
                 "text": text_metadata,
                 "vision": vision_metadata
@@ -1587,6 +1598,132 @@ async def handle_suggestion(req: SuggestionRequest):
 # ============================================================
 # ⚙️ 後台管理 API
 # ============================================================
+
+@app.post("/api/generate_image")
+async def handle_generate_image(req: GenerateImageRequest):
+    state = req.state
+    image_b64 = ""
+    vision_metadata = {"model": "imagen-4.0-fast", "latency": 0, "final_prompt": req.final_prompt, "error": None}
+    
+    img_start = time.time()
+    # 🎨 Vertex AI Imagen 影像生成引擎
+    try:
+        print(f"[VISION] 啟動 Vertex AI Imagen 繪圖模組...")
+        image_res = client_vertex.models.generate_images(
+            model="imagen-4.0-fast-generate-001",
+            prompt=req.final_prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="16:9",
+                safety_filter_level="block_only_high",
+                person_generation="allow_adult"
+            )
+        )
+
+        generated = image_res.generated_images
+        if generated and generated[0].image and generated[0].image.image_bytes:
+            image_b64 = base64.b64encode(generated[0].image.image_bytes).decode('utf-8')
+            state.last_image_prompt = req.final_prompt
+            state.consecutive_failed_images = 0
+            print(f"[IMAGEN SUCCESS] Vertex AI 為回合 {state.turn} 生成影像成功！耗時: {time.time() - img_start:.2f}秒")
+        else:
+            raise Exception("Empty or None image bytes (safety filter likely blocked the image)")
+
+    except Exception as img_e:
+        print(f"[IMAGEN ERROR] {type(img_e).__name__}: {img_e}")
+        state.consecutive_failed_images += 1
+        vision_metadata["error"] = str(img_e)
+
+        # 降級圖片類主視覺崩解效果
+        degrade_mod = " Heavy black ink vignette, visual noise."
+        if state.consecutive_failed_images == 2:
+            degrade_mod = " Total visual collapse, extreme ink bleeding, figure disappearing into black void."
+
+            fallback_prompt = build_image_prompt(state.last_image_prompt + degrade_mod, state.fear / 100.0)
+            try:
+                image_res_fb = client_vertex.models.generate_images(
+                    model="imagen-4.0-fast-generate-001",
+                    prompt=fallback_prompt,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio="16:9",
+                        safety_filter_level="block_only_high",
+                        person_generation="allow_adult"
+                    )
+                )
+                if image_res_fb.generated_images:
+                    image_b64 = base64.b64encode(image_res_fb.generated_images[0].image.image_bytes).decode('utf-8')
+                    print("[IMAGEN fallback] 降級影像生成成功。")
+            except Exception as fb_e:
+                print(f"[IMAGEN fallback error] {fb_e}")
+
+    vision_metadata["latency"] = round(time.time() - img_start, 2)
+    
+    # 續寫該回合歷史紀錄中的 image_b64 和生圖元數據
+    if state.history:
+        state.history[-1]["image_b64"] = image_b64
+        state.history[-1]["vision_metadata"] = vision_metadata
+
+    # 如果遊戲結束，將整場遊玩紀錄存成 JSON 檔案，並且將過程中暫存的圖片寫入硬碟
+    if state.is_over:
+        import datetime
+        import uuid
+
+        os.makedirs(ARCHIVE_IMAGES_DIR, exist_ok=True)
+        
+        # 遍歷歷史紀錄，將每一回合的 image_b64 寫入實體硬碟並產生 URL
+        for turn in state.history:
+            if turn.get("image_b64"):
+                img_filename = f"turn_{turn['turn']}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.jpg"
+                img_path = os.path.join(ARCHIVE_IMAGES_DIR, img_filename)
+                try:
+                    with open(img_path, "wb") as f:
+                        f.write(base64.b64decode(turn["image_b64"]))
+                    turn["image_url"] = f"/data_archive_images/{img_filename}"
+                except Exception as save_img_e:
+                    print(f"[SAVE ERROR] 儲存回合圖片失敗: {save_img_e}")
+            
+            # 刪除 image_b64，避免寫入 JSON 導致檔案過大
+            if "image_b64" in turn:
+                del turn["image_b64"]
+        
+        # 最後一張產生的圖片會被視為最終結局圖片
+        final_image_url = state.history[-1].get("image_url", "") if state.history else ""
+
+        run_data = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "total_turns": state.turn,
+            "final_fear": state.fear,
+            "inventory": state.inventory,
+            "ending_title": req.ending_title,
+            "ending_narrative": req.ending_narrative,
+            "ending_type": state.ending,
+            "ending_retrospective": req.ending_retrospective,
+            "final_image_url": final_image_url,
+            "history": state.history
+        }
+        
+        # 將遊戲紀錄儲存到永久目錄
+        os.makedirs(RUNS_DIR, exist_ok=True)
+        filename = f"run_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}.json"
+        filepath = os.path.join(RUNS_DIR, filename)
+        try:
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(run_data, f, ensure_ascii=False, indent=2)
+            print(f"[SAVE] 遊戲紀錄已儲存至: {filepath}")
+        except Exception as save_e:
+            print(f"[SAVE ERROR] 儲存紀錄失敗: {save_e}")
+
+    return {
+        "image_b64": image_b64,
+        "image_url": state.history[-1].get("image_url", "") if (state.is_over and state.history) else "",
+        "new_state": state,
+        "metadata": {
+            "vision": vision_metadata
+        }
+    }
+
+
 @app.get("/api/admin/runs")
 def list_runs():
     runs_dir = RUNS_DIR

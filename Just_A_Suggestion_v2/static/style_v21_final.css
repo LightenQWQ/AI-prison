@@ -26,18 +26,15 @@ body {
 }
 
 #game-container {
-    width: 98vw;
-    max-width: 1200px;
-    height: 98dvh;
+    width: 100vw;
+    height: 100dvh;
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 強制所有子元素水平置中 */
-    padding: 0.5rem clamp(0.5rem, 2vh, 1.5rem) clamp(0.5rem, 2vh, 1.5rem) clamp(0.5rem, 2vh, 1.5rem);
+    align-items: center;
     background: #000;
-    border: 1px solid #1a1a1a;
-    box-shadow: 0 0 100px rgba(0,0,0,1);
     opacity: 1;
+    overflow: hidden;
 }
 
 /* 夢境序章 */
@@ -107,15 +104,16 @@ body {
 
 /* 遮罩/開場效果 */
 #overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; /* 防止閃爍，背景設為純黑 */
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100dvh;
+    background: #000;
     z-index: 100;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     transition: opacity 2.5s ease;
+    overflow: hidden;
 }
 
 #game-container {
@@ -266,17 +264,111 @@ body {
         height: 50px;
     }
     
-    #scene-container {
-        max-height: 40vh; /* 手機版畫面縮小，讓出空間給對話與輸入 */
+    /* 1. 頂部控制面板位置微調，避開前置鏡頭或圓角 */
+    #home-panel, #title-back-btn {
+        top: 15px !important;
+        left: 15px !important;
+    }
+    #audio-panel {
+        top: 15px !important;
+        right: 15px !important;
+    }
+    #skip-intro-btn {
+        top: 55px !important;
+        right: 15px !important;
+    }
+
+    /* 2. 標題大小與字距自適應，防止撐出螢幕 */
+    .ink-title {
+        letter-spacing: 6px !important;
+        margin-right: -6px !important;
+        font-size: 1.8rem !important;
+    }
+
+    /* 2.5 終端去框化按鈕與前置入口按鈕自適應 */
+    .btn-terminal {
+        font-size: 0.85rem !important;
+        letter-spacing: 4px !important;
+        padding: 10px 5px !important;
     }
     
+    #pre-entry button {
+        font-size: 0.9rem !important;
+        letter-spacing: 4px !important;
+        padding: 10px 20px !important;
+    }
+    
+    #pre-entry a {
+        font-size: 0.75rem !important;
+        letter-spacing: 2px !important;
+    }
+
+    /* 3. 圖片容器高度優化 */
+    #scene-container {
+        max-height: 38vh !important;
+    }
+
+    /* 4. 手機版對話框微調 */
     #dialogue-box {
-        padding: 0.8rem;
-        min-height: 100px;
+        padding: 0.8rem 5% !important;
+        min-height: 85px !important;
+        background-color: #020202 !important;
     }
     
     #text-content {
-        line-height: 1.4;
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+    }
+
+    /* 5. 旁白緊湊度優化 */
+    #narrator-text {
+        font-size: 0.82rem !important;
+        padding: 8px 15px !important;
+        min-height: 2em !important;
+        max-width: 90% !important;
+        margin: 10px auto !important;
+        line-height: 1.6 !important;
+    }
+
+    /* 6. 輸入區寬度放大 (90%) 且邊距縮減，防止手機鍵盤或滑動條截斷 */
+    #input-area {
+        width: 90% !important;
+        margin: 0.8rem auto 1.2rem auto !important;
+    }
+    
+    #suggestion-input {
+        font-size: 1rem !important;
+        padding: 12px !important;
+        enterkeyhint: send;
+    }
+    
+    #submit-btn {
+        padding: 10px 18px !important;
+        color: rgba(255,255,255,0.75) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        border-radius: 4px !important;
+        min-width: 64px;
+        background: rgba(255,255,255,0.07) !important;
+        flex-shrink: 0;
+    }
+
+    /* 7. NARRATIVE LOG 按鈕：手機版超小且不遮擋輸入框 */
+    #debug-toggle {
+        right: 6px !important;
+        bottom: 6px !important;
+        padding: 3px 7px !important;
+        font-size: 7px !important;
+        letter-spacing: 0.5px !important;
+        opacity: 0.30 !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        border-color: rgba(255,255,255,0.08) !important;
+        /* 防止遮擋輸入框 */
+        transform: none !important;
+        animation: none !important;
+    }
+    
+    #debug-toggle:hover {
+        opacity: 0.9 !important;
     }
 }
 
@@ -285,6 +377,41 @@ body {
     #monitor-dashboard { display: none; } /* 隱藏儀表板以確保能看到畫面與對話 */
     #scene-container { max-height: 45vh; }
 }
+
+/* 桌面版優化 (寬螢幕) */
+@media (min-width: 768px) {
+    #scene-container {
+        max-height: 58vh;
+    }
+    
+    #dialogue-box {
+        width: 80%;
+        max-width: 860px;
+        padding: 16px 60px;
+    }
+    
+    #narrator-text {
+        font-size: 0.95rem;
+        max-width: 680px;
+        margin: 8px auto;
+    }
+    
+    #input-area {
+        width: 40%;
+        max-width: 480px;
+        margin: 8px auto 16px auto;
+    }
+    
+    #text-content {
+        font-size: 1.35rem;
+    }
+    
+    #inventory-display {
+        margin-top: 4px;
+        margin-bottom: 6px;
+    }
+}
+
 
 /* 核心圖片容器 — Cinema 全屏模式
    實際寬高由 HTML inline style 的 flex:1 / max-height:none 控制
@@ -303,13 +430,17 @@ body {
     object-fit: cover;
     object-position: center center;
     display: block;
-    /* scale(1.1): 微幅放大裁去 Imagen 圖片的白邊
-       現在 CSS 已移除 aspect-ratio 衝突，不會再讓圖片看起來像 1:1 */
-    transform: scale(1.1);
+    transform: scale(1.05);
     transform-origin: center center;
-    filter: grayscale(1) contrast(1.1) grayscale(1) brightness(0.85) blur(0px);
-    transition: opacity 1.2s ease, filter 1.2s ease;
+    filter: grayscale(1) contrast(1.1) brightness(0.85) blur(0px);
+    transition: opacity 1.5s ease, filter 2.0s ease;
     z-index: 1;
+}
+
+/* 圖片等待模糊狀態：旁白打字期間舊圖模糊 */
+#scene-image.blurring-out {
+    filter: grayscale(1) contrast(1.1) brightness(0.6) blur(8px) !important;
+    transition: filter 1.8s ease !important;
 }
 
 /* ── 白邊保險層：雙重防護（scale+漸層），覆蓋至 28% ── */
@@ -346,25 +477,111 @@ body {
 @keyframes blink { 50% { opacity: 0; } }
 
 /* 對話與輸入區 */
-#dialogue-box {
-    width: 100%; /* 確保對話框佔滿可視寬度並內容置中 */
-    flex-shrink: 0;
-    padding: clamp(1rem, 3vh, 1.5rem);
-    background: #080808;
-    border-top: 1px solid #151515;
-    min-height: clamp(100px, 15vh, 150px);
-    overflow-y: auto; /* 預防文字溢出 */
+#narrator-text {
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #8a8a8a;
+    text-align: center;
+    max-width: 700px;
+    width: 90%;
+    margin: 10px auto;
+    padding: 8px 20px;
+    letter-spacing: 1px;
+    font-style: normal;
+    border-left: 2px solid rgba(255, 255, 255, 0.08);
+    border-right: 2px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.015);
+    border-radius: 4px;
+    transition: all 0.5s ease;
+    align-self: center;
+    min-height: 2.5em;
 }
 
-#speaker { font-size: clamp(0.7rem, 1.5vw, 0.8rem); color: #444; letter-spacing: 3px; margin-bottom: 0.5rem; }
-#text-content { font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.6; color: #999; }
-#desc-content { font-size: clamp(0.75rem, 2vw, 0.85rem); color: #555; margin-top: 0.5rem; }
+/* 打字機游標閃爍 */
+#narrator-text.typing {
+    text-align: left;
+}
+
+#narrator-text.typing::after {
+    content: '▋';
+    display: inline-block;
+    opacity: 1;
+    animation: cursor-blink 0.7s step-end infinite;
+    margin-left: 2px;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8em;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 主角對白淡入動畫 */
+#text-content {
+    transition: opacity 0.8s ease;
+}
+#text-content.hidden-for-reveal {
+    opacity: 0;
+}
+
+#dialogue-box {
+    width: 100%;
+    max-width: 900px;
+    flex-shrink: 0;
+    padding: 16px 40px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.6) 70%, transparent);
+    background-color: #050505;
+    border-top: 1px solid #111;
+    text-align: center;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    align-self: center;
+}
+
+#status-indicator {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 5px;
+    margin-bottom: 6px;
+}
+
+#speaker {
+    font-family: 'Courier New', monospace;
+    color: #888;
+    font-size: 0.75rem;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+#text-content {
+    font-family: 'EB Garamond', serif;
+    font-size: 1.4rem;
+    line-height: 1.9;
+    color: #ffffff;
+    font-style: italic;
+    text-shadow: 0 2px 12px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8);
+    margin: 0;
+}
 
 #input-area {
-    flex-shrink: 0;
-    margin-top: 1rem;
+    width: 50%;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 5px 0;
     display: flex;
-    border: 1px solid #151515;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    align-self: center;
 }
 
 #suggestion-input {
@@ -372,17 +589,30 @@ body {
     background: transparent;
     border: none;
     color: #fff;
-    padding: clamp(10px, 2vh, 15px);
-    font-size: clamp(0.9rem, 2vw, 1rem);
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    padding: 10px;
     outline: none;
+    letter-spacing: 2px;
 }
 
 #submit-btn {
-    background: #111; color: #555; border: none; padding: 0 clamp(15px, 4vw, 30px);
-    cursor: pointer; transition: 0.3s;
-    font-size: clamp(0.8rem, 2vw, 1rem);
+    background: transparent;
+    border: none;
+    color: #444;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    padding: 0 15px;
+    transition: all 0.3s ease;
 }
-#submit-btn:hover { background: #222; color: #fff; }
+
+#submit-btn:hover {
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
 
 #inventory-display {
     flex-shrink: 0;
@@ -433,18 +663,19 @@ body {
 /* ── 工程監控面板 (Engine Monitor) ── */
 #debug-toggle {
     position: fixed;
-    right: 20px;
-    bottom: 20px;
+    right: 12px;
+    bottom: 12px;
     z-index: 2000;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.6);
-    padding: 8px 15px;
-    font-size: 10px;
-    letter-spacing: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.35);
+    padding: 5px 10px;
+    font-size: 8px;
+    letter-spacing: 1px;
     cursor: pointer;
     backdrop-filter: blur(5px);
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
+    /* NO animation: stays fixed */
 }
 
 #debug-toggle:hover {
@@ -511,6 +742,14 @@ hr {
 }
 .cinematic-animation {
     animation: cinematic-pan-zoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes cinematic-pan-zoom-ending {
+    0% { transform: scale(1.05) translate(0%, 0%); filter: grayscale(0) contrast(1.05) brightness(0.95); }
+    100% { transform: scale(1.15) translate(-2%, 1%); filter: grayscale(0) contrast(1.1) brightness(1.0); }
+}
+.cinematic-animation-ending {
+    animation: cinematic-pan-zoom-ending 20s ease-in-out infinite alternate;
 }
 
 /* Quest HUD 進行中圓點脈動 */

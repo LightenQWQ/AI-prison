@@ -336,6 +336,7 @@ window.onload = () => {
         
         if (video) {
             video.src = "assets/2.0.mp4";
+            video.load();
             video.loop = true;
             video.play();
         }
@@ -416,6 +417,27 @@ async function resumeGame() {
 
 async function quickStart() {
     console.log("DEBUG: Quick starting game...");
+    
+    // 重設遊戲狀態並清除舊存檔
+    gameState = {
+        trust: 30,
+        fear: 40,
+        location: "rainy_alley",
+        turn: 0,
+        is_over: false,
+        ending: "",
+        clues_found: [],
+        memories_unlocked: [],
+        current_chapter: 1,
+        scene_object: "",
+        puzzle_stage: 1,
+        inventory: [],
+        flags: {},
+        history: [],
+        last_monologues: []
+    };
+    clearGameSave();
+
     const entry = document.getElementById('pre-entry');
     const overlay = document.getElementById('overlay');
     const gameContainer = document.getElementById('game-container');
@@ -445,6 +467,26 @@ async function quickStart() {
 
 async function startGame() {
     isSkippingPrologue = false;
+    
+    // 重設遊戲狀態並清除舊存檔
+    gameState = {
+        trust: 30,
+        fear: 40,
+        location: "rainy_alley",
+        turn: 0,
+        is_over: false,
+        ending: "",
+        clues_found: [],
+        memories_unlocked: [],
+        current_chapter: 1,
+        scene_object: "",
+        puzzle_stage: 1,
+        inventory: [],
+        flags: {},
+        history: [],
+        last_monologues: []
+    };
+    clearGameSave();
     
     // 如果全域已經有 soundManager (來自 index.html 啟動)，則沿用，避免重複播放
     if (!window.soundManager) {
@@ -570,7 +612,9 @@ function showNextIntro() {
 
 function updateUI(data) {
     const sceneImg = document.getElementById('scene-image');
-    sceneImg.style.opacity = "1"; // 強制恢復透明度，避免卡在 0.5
+    if (data.image_b64 || data.image_url) {
+        sceneImg.style.opacity = "1"; // 有新圖片時才恢復透明度
+    }
     // 主角對白 → 白色對話框
     if (data.dialogue !== undefined) {
         // 若 Gemini 成功回傳但 dialogue 為空字串，顯示省略號而非「保持沉默」
@@ -590,7 +634,16 @@ function updateUI(data) {
     let narratorParts = [];
     if (data.narration) narratorParts.push(data.narration);
     if (data.scene_object) narratorParts.push(`【場景物件】${data.scene_object}`);
-    narratorEl.innerText = narratorParts.join('  ｜  ');
+    
+    if (narratorParts.length > 0) {
+        narratorEl.innerText = narratorParts.join('  ｜  ');
+        narratorEl.style.display = 'block';
+        narratorEl.style.opacity = '1';
+    } else {
+        narratorEl.innerText = '';
+        narratorEl.style.display = 'none';
+        narratorEl.style.opacity = '0';
+    }
 
     // 記憶碎片：展示為醒目的白色文字
     if (data.memory_fragment) {
@@ -607,24 +660,36 @@ function updateUI(data) {
         lastImageB64 = data.image_b64; // 紀錄最後一張圖用於存檔
         const sceneImg = document.getElementById('scene-image');
         sceneImg.style.opacity = "0";
-        sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)"; // 轉場開始：模糊
+        
+        const isEnding = (data.ending_title || (data.new_state && data.new_state.is_over));
+        const filterTarget = isEnding ? "contrast(1.05) grayscale(0) brightness(0.95) blur(0px)" : "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
+        const filterBlur = isEnding ? "contrast(1.05) grayscale(0) brightness(0.95) blur(20px)" : "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)";
+        
+        sceneImg.style.filter = filterBlur; // 轉場開始：模糊
         
         setTimeout(() => {
             sceneImg.src = "data:image/png;base64," + data.image_b64;
-            sceneImg.classList.add("cinematic-animation");
+            sceneImg.classList.remove("cinematic-animation", "cinematic-animation-ending");
+            sceneImg.classList.add(isEnding ? "cinematic-animation-ending" : "cinematic-animation");
             sceneImg.style.opacity = "1";
-            sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)"; // 轉場結束：清晰
+            sceneImg.style.filter = filterTarget; // 轉場結束：清晰
         }, 300);
     } else if (data.image_url) {
         const sceneImg = document.getElementById('scene-image');
         sceneImg.style.opacity = "0";
-        sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)";
+        
+        const isEnding = (data.ending_title || (data.new_state && data.new_state.is_over));
+        const filterTarget = isEnding ? "contrast(1.05) grayscale(0) brightness(0.95) blur(0px)" : "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
+        const filterBlur = isEnding ? "contrast(1.05) grayscale(0) brightness(0.95) blur(20px)" : "contrast(1.1) grayscale(1) brightness(0.85) blur(20px)";
+        
+        sceneImg.style.filter = filterBlur;
         
         setTimeout(() => {
             sceneImg.src = data.image_url;
-            sceneImg.classList.add("cinematic-animation");
+            sceneImg.classList.remove("cinematic-animation", "cinematic-animation-ending");
+            sceneImg.classList.add(isEnding ? "cinematic-animation-ending" : "cinematic-animation");
             sceneImg.style.opacity = "1";
-            sceneImg.style.filter = "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
+            sceneImg.style.filter = filterTarget;
         }, 100);
     }
 
@@ -839,37 +904,38 @@ async function sendSuggestion() {
 
     input.value = "";
     document.getElementById('submit-btn').disabled = true;
-    document.getElementById('scene-image').style.opacity = "0.5";
-    
+
     document.getElementById('debug-status').innerText = "GENERATING...";
     document.getElementById('debug-status').style.color = "#ffff00";
     
     const textContent = document.getElementById('text-content');
     const narratorEl = document.getElementById('narrator-text');
     
-    // 預設等待 AI 生成專屬文字前，顯示括號內的點點點動畫
     let currentThought = "";
     let dotCount = 1;
     let narratorInterval = null;
 
-    const dotSequence = [
-        ".",
-        "..",
-        "...",
-        "....",
-        "....."
-    ];
+    const dotSequence = [".", "..", "...", "....", "....."];
+    const shouldAnimateNarrator = gameState.turn >= 1;
 
     const animateNarrator = () => {
-        narratorEl.innerText = `（${currentThought}${dotSequence[dotCount - 1]}）`;
-        narratorEl.style.opacity = '1';
+        if (shouldAnimateNarrator) {
+            narratorEl.innerText = `（${currentThought}${dotSequence[dotCount - 1]}）`;
+            narratorEl.style.display = 'block';
+            narratorEl.style.opacity = '1';
+        } else {
+            narratorEl.innerText = '';
+            narratorEl.style.display = 'none';
+            narratorEl.style.opacity = '0';
+        }
         dotCount = dotCount >= 5 ? 1 : dotCount + 1;
     };
     
     animateNarrator();
-    narratorInterval = setInterval(animateNarrator, 500);
+    if (shouldAnimateNarrator) {
+        narratorInterval = setInterval(animateNarrator, 500);
+    }
 
-    // 同步去後端請求一句專屬的 AI 想法（快速返回，不生圖）
     fetch('/api/thought', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -887,68 +953,210 @@ async function sendSuggestion() {
             body: JSON.stringify({ suggestion: text, state: gameState })
         });
         const data = await response.json();
-        
-        clearInterval(narratorInterval);
-        
         if (data.error) {
             console.error("API Error:", data.error);
+            clearInterval(narratorInterval); // 發生錯誤，停止動畫
             narratorEl.innerText = `（系統訊號異常：${data.error}）`;
-            document.getElementById('submit-btn').disabled = false; // ✅ 修正：錯誤時重新啟用按鈕
+            narratorEl.style.display = 'block';
+            narratorEl.style.opacity = '1';
+            document.getElementById('submit-btn').disabled = false;
+            input.focus();
         } else {
-            updateUI(data);
-            
-            if (data.new_state && data.new_state.is_over) {
-                // 播放結局音樂
-                const endingType = data.new_state.ending || "awakening";
-                if (endingType === "connection_lost" || endingType === "escapism") {
-                    soundManager.playBGM('ending_bad');
-                } else {
-                    soundManager.playBGM('ending_good');
-                }
-                
-                // 顯示全螢幕結局畫面（4秒後切入，讓玩家先看最後一張圖）
-                setTimeout(() => {
-                    clearGameSave(); // 遊戲結束，清除存檔
-                    const endScreen = document.getElementById('ending-screen');
-                    const titleEl = document.getElementById('ending-title-display');
-                    const narrativeEl = document.getElementById('ending-narrative-display');
-                    const retroWrap = document.getElementById('ending-retrospective-wrap');
-                    const retroDivider = document.getElementById('retro-divider');
-                    const retroEl = document.getElementById('ending-retrospective-display');
-                    
-                    titleEl.innerText = data.ending_title || '【結局】';
-                    narrativeEl.innerText = data.ending_narrative || '雨不停歇。這座城市將再次歸於沉默。';
-                    
-                    endScreen.style.display = 'flex';
-                    setTimeout(() => endScreen.style.opacity = '1', 50);
+            // ═══════════════════════════════════════════════════════
+            // 新演出流程：
+            // 第一幕：旁白打字機顯示 + 舊圖同步模糊
+            // 第二幕（等待）：圖片生成中...
+            // 第三幕：旁白打完 & 圖片都到位 → 主角對白淡入 + 新圖清晰登場
+            // ═══════════════════════════════════════════════════════
 
-                    // 心境回顧：打字機效果，延遲出現
-                    const retroText = data.ending_retrospective || '';
-                    if (retroText) {
-                        setTimeout(() => {
-                            retroDivider.style.display = 'flex';
-                            retroWrap.style.display = 'block';
-                            retroEl.innerText = '';
-                            let i = 0;
-                            const typeInterval = setInterval(() => {
-                                if (i < retroText.length) {
-                                    retroEl.innerText += retroText[i];
-                                    i++;
-                                } else {
-                                    clearInterval(typeInterval);
-                                }
-                            }, 40);
-                        }, 3500); // 結局文字顯示3.5秒後才出現內心獨白
-                    }
-                }, 4000); // 讓玩家先看最後一張圖 4 秒再切入結局
+            clearInterval(narratorInterval);
+
+            const sceneImageEl = document.getElementById('scene-image');
+            const narratorEl   = document.getElementById('narrator-text');
+            const textContent  = document.getElementById('text-content');
+            const submitBtn    = document.getElementById('submit-btn');
+
+            // --- 隱藏主角對白，等第三幕再一起亮相 ---
+            textContent.classList.add('hidden-for-reveal');
+
+            // --- 第一幕：舊圖開始模糊 ---
+            if (sceneImageEl) {
+                sceneImageEl.classList.add('blurring-out');
             }
 
+            // --- 第一幕：旁白打字機效果 ---
+            const narrationText = data.narration || '';
+            narratorEl.innerText = '';
+            narratorEl.style.display = 'block';
+            narratorEl.style.opacity = '1';
+            narratorEl.classList.add('typing');
+
+            // 用 Promise 包住打字機，便於等待
+            const CHAR_SPEED = 60; // ms/字，可調快慢
+            const typingDone = new Promise(resolve => {
+                if (!narrationText) { resolve(); return; }
+                let i = 0;
+                const typeInterval = setInterval(() => {
+                    if (i < narrationText.length) {
+                        narratorEl.innerText = narrationText.slice(0, i + 1);
+                        i++;
+                    } else {
+                        clearInterval(typeInterval);
+                        narratorEl.classList.remove('typing');
+                        resolve();
+                    }
+                }, CHAR_SPEED);
+            });
+
+            // --- 同時：背景非同步呼叫生圖 API ---
+            const imageDone = fetch('/api/generate_image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    final_prompt: data.final_image_prompt || '',
+                    camera_angle: data.camera_angle || 'medium',
+                    scene_location: data.scene_location || 'alley',
+                    state: data.new_state,
+                    ending_title: data.ending_title || '',
+                    ending_narrative: data.ending_narrative || '',
+                    ending_retrospective: data.ending_retrospective || ''
+                })
+            }).then(res => res.json());
+
+            // 更新 debug 狀態
+            document.getElementById('debug-status').innerText = "GENERATING IMAGE...";
+            document.getElementById('debug-status').style.color = "#ffff00";
+
+            // 更新遊戲狀態（不含圖片的部分先更新）
+            gameState = data.new_state;
+            if (data.new_state && data.new_state.location !== undefined) {
+                if (data.new_state.location !== gameState.location) {
+                    triggerCameraGlitch(data.new_state.location);
+                }
+                updateLocationDisplay(gameState.location);
+                if (gameState.player_quest) updateQuestHUD(gameState.player_quest);
+            }
+            if (data.clue_found) {
+                // 線索提示（可視情況顯示）
+            }
+            if (data.metadata) updateDebugInfo(data.metadata);
+
+            // --- 第三幕：圖片一到位就立即顯示，不等旁白跑完 ---
+            imageDone.then(imgData => {
+
+                // 解鎖輸入
+                submitBtn.disabled = false;
+                input.focus();
+
+                // 主角對白淡入
+                const dialogueText = data.dialogue || '......';
+                textContent.innerText = dialogueText;
+                textContent.classList.remove('hidden-for-reveal');
+
+                // 新圖片登場（移除模糊，清晰淡入）
+                if (sceneImageEl) sceneImageEl.classList.remove('blurring-out');
+
+                if (imgData && imgData.image_b64) {
+                    lastImageB64 = imgData.image_b64;
+                    const isEnding = (data.ending_title || (data.new_state && data.new_state.is_over));
+                    const filterTarget = isEnding
+                        ? "contrast(1.05) grayscale(0) brightness(0.95) blur(0px)"
+                        : "contrast(1.1) grayscale(1) brightness(0.85) blur(0px)";
+
+                    sceneImageEl.style.opacity = "0";
+                    sceneImageEl.src = "data:image/png;base64," + imgData.image_b64;
+                    sceneImageEl.classList.remove("cinematic-animation", "cinematic-animation-ending");
+                    sceneImageEl.classList.add(isEnding ? "cinematic-animation-ending" : "cinematic-animation");
+                    sceneImageEl.style.filter = filterTarget;
+
+                    setTimeout(() => { sceneImageEl.style.opacity = "1"; }, 50);
+                } else if (sceneImageEl) {
+                    // 圖片生成失敗：直接恢復清晰
+                    sceneImageEl.style.opacity = "1";
+                }
+
+                // 更新圖片生成後的 debug 面板
+                if (imgData && imgData.metadata && imgData.metadata.vision) {
+                    const brainInfo = `gemini-2.5-flash | ${data.metadata.text.latency}s`;
+                    const visionModel = imgData.metadata.vision.model || 'imagen-4.0-fast';
+                    const visionLatency = imgData.metadata.vision.latency || 0;
+                    document.getElementById('debug-model').innerText = `${visionModel} | ${brainInfo}`;
+                    document.getElementById('debug-latency').innerText = `Vision:${visionLatency}s | Brain:${data.metadata.text.latency}s`;
+                }
+
+                // 更新 gameState 為圖片回傳後的最新狀態
+                if (imgData && imgData.new_state) {
+                    gameState = imgData.new_state;
+                    saveGame();
+                }
+
+                // 結局音樂與畫面
+                if (imgData && imgData.new_state && imgData.new_state.is_over) {
+                    const endingType = imgData.new_state.ending || "awakening";
+                    if (endingType === "connection_lost" || endingType === "escapism") {
+                        soundManager.playBGM('ending_bad');
+                    } else {
+                        soundManager.playBGM('ending_good');
+                    }
+
+                    setTimeout(() => {
+                        clearGameSave();
+                        const endScreen = document.getElementById('ending-screen');
+                        const titleEl   = document.getElementById('ending-title-display');
+                        const narrativeEl2 = document.getElementById('ending-narrative-display');
+                        const retroWrap = document.getElementById('ending-retrospective-wrap');
+                        const retroDivider = document.getElementById('retro-divider');
+                        const retroEl   = document.getElementById('ending-retrospective-display');
+
+                        titleEl.innerText = imgData.ending_title || '【結局】';
+                        narrativeEl2.innerText = imgData.ending_narrative || '雨不停歇。這座城市將再次歸於沉默。';
+
+                        narrativeEl2.style.opacity = '0';
+                        narrativeEl2.style.transition = 'opacity 3s ease-in-out';
+
+                        endScreen.style.display = 'flex';
+                        setTimeout(() => endScreen.style.opacity = '1', 50);
+                        setTimeout(() => { narrativeEl2.style.opacity = '1'; }, 2500);
+
+                        const retroText = imgData.ending_retrospective || '';
+                        if (retroText) {
+                            setTimeout(() => {
+                                retroDivider.style.display = 'flex';
+                                retroWrap.style.display = 'block';
+                                retroEl.innerText = '';
+                                let i = 0;
+                                const typeInterval = setInterval(() => {
+                                    if (i < retroText.length) {
+                                        retroEl.innerText += retroText[i];
+                                        i++;
+                                    } else {
+                                        clearInterval(typeInterval);
+                                    }
+                                }, 40);
+                            }, 6000);
+                        }
+                    }, 4000);
+                }
+
+            }).catch(imgErr => {
+                console.error("Image generation failed:", imgErr);
+                narratorEl.classList.remove('typing');
+                if (sceneImageEl) {
+                    sceneImageEl.classList.remove('blurring-out');
+                    sceneImageEl.style.opacity = "1";
+                }
+                textContent.innerText = data.dialogue || '......';
+                textContent.classList.remove('hidden-for-reveal');
+                submitBtn.disabled = false;
+                input.focus();
+            });
         }
     } catch (e) {
         console.error(e);
         clearInterval(narratorInterval);
         narratorEl.innerText = '訊號中斷——請稍後再試。';
-    } finally {
+        narratorEl.style.display = 'block';
+        narratorEl.style.opacity = '1';
         document.getElementById('submit-btn').disabled = false;
         input.focus();
     }

@@ -76,7 +76,7 @@ function openDetail(index) {
             html += `
             <div class="report-card">
                 <div class="turn-header">Turn ${turn.turn}</div>
-                <div class="player-msg">>> 玩家 (AI): ${turn.user_suggestion || '...'}</div>
+                <div class="player-msg">>> 玩家: ${turn.user_suggestion || '...'}</div>
                 ${turn.dialogue ? `<div class="ai-dialogue">主角: 「${turn.dialogue}」</div>` : ''}
                 ${turn.narration ? `<div class="ai-narration">旁白: ${turn.narration}</div>` : ''}
                 <div class="meta-info">

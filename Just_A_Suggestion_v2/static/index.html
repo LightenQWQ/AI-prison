@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Just a Suggestion | 只是一個建議</title>
-    <link rel="stylesheet" href="style_v21_final.css?v=1.1">
+    <link rel="stylesheet" href="style_v21_final.css?v=1.4">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700&family=EB+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
 </head>
     <!-- 全域降雨效果層 -->
@@ -201,7 +201,7 @@
                 << BACK
             </div>
             <!-- [響應式標題] 寬屏單行，豎屏雙行 -->
-            <div style="margin-top: 35vh; width: 100%; text-align: center; padding: 0 5vw; box-sizing: border-box;">
+            <div style="margin-top: clamp(15vh, 28vh, 35vh); width: 100%; text-align: center; padding: 0 5vw; box-sizing: border-box;">
                 <div class="title-ink-wrapper">
                     <h1 class="ink-title">
                         JUST A<br class="br-mobile"> SUGGESTION
@@ -226,11 +226,11 @@
         </div>
     </div>
 
-    <div id="game-container" style="display: none; border: none; box-shadow: none; padding: 0; width: 100vw; height: 100vh; max-width: none; flex-direction: column;">
+    <div id="game-container" style="display: none; border: none; box-shadow: none; padding: 0; flex-direction: column;">
         <!-- 儀表板改為隱藏狀態，保留 DOM 供 JS 更新數據，但不再顯示 -->
         <header id="monitor-dashboard" style="display: none;"></header>
 
-        <div id="scene-container" style="flex: 1; width: 100%; border: none; margin: 0; max-height: none; background: #000; position: relative;">
+        <div id="scene-container" style="flex: 1; width: 100%; border: none; margin: 0; background: #000; position: relative; overflow: hidden;">
             <!-- 移除 OSD 條 -->
             <div id="monitor-osd-bar" style="display: none;"></div>
             
@@ -239,45 +239,22 @@
             <div class="vignette" style="background: radial-gradient(ellipse, transparent 50%, rgba(0,0,0,0.7) 100%);"></div>
             <div id="noise-layer"></div>
             <div class="panel-border" style="display: none;"></div>
-
-            <!-- ⭐ 台詞疊加在圖片上中間 -->
-            <div id="dialogue-box" style="
-                position: absolute;
-                bottom: 18%;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 80%;
-                text-align: center;
-                background: linear-gradient(transparent, rgba(0,0,0,0.6) 30%, rgba(0,0,0,0.6) 70%, transparent);
-                padding: 20px 40px;
-                border-radius: 4px;
-                z-index: 10;
-            ">
-                <div id="status-indicator" style="font-family: 'Courier New', monospace; font-size: 0.6rem; color: rgba(255,255,255,0.15); letter-spacing: 5px; margin-bottom: 6px;">[SYNCED]</div>
-                <div id="speaker" style="font-family: 'Courier New', monospace; color: #888; font-size: 0.7rem; letter-spacing: 6px; margin-bottom: 10px; text-transform: uppercase;">青年</div>
-                <p id="text-content" style="font-family: 'EB Garamond', serif; font-size: 1.4rem; line-height: 1.9; color: #ffffff; font-style: italic; text-shadow: 0 2px 12px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8); margin: 0;">......</p>
-            </div>
         </div>
 
-        <!-- ⭐ 旁白固定在底部 -->
-        <p id="narrator-text" style="
-            color: #c0c0c0;
-            text-align: center;
-            font-size: 0.95rem;
-            letter-spacing: 2px;
-            font-style: italic;
-            padding: 14px 10%;
-            min-height: 2.5em;
-            line-height: 1.9;
-            background: rgba(0,0,0,0.88);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            margin: 0;
-            text-shadow: 0 1px 6px rgba(0,0,0,1);
-        "></p>
+        <!-- 台詞與對話框 (從圖片容器移出獨立，避免 overflow 裁剪) -->
+        <div id="dialogue-box">
+            <div id="status-indicator">[SYNCED]</div>
+            <div id="speaker">少年</div>
+            <p id="text-content">......</p>
+        </div>
 
-        <div id="input-area" style="width: 50%; max-width: 500px; margin: 0 auto 50px auto; border: none; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 5px 0;">
-            <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off" style="background: transparent; border: none; color: #fff; font-family: 'Courier New', monospace; font-size: 0.9rem; padding: 10px; width: 100%; outline: none; letter-spacing: 2px;">
-            <button id="submit-btn" onclick="sendSuggestion()" style="background: transparent; border: none; color: #444; font-family: 'Courier New', monospace; letter-spacing: 4px; cursor: pointer; text-transform: uppercase; font-size: 0.75rem;">Enter</button>
+        <!-- 旁白固定在底部 -->
+        <p id="narrator-text"></p>
+
+        <!-- 輸入區 (移除非必要的 inline styles，改由外部 CSS 集中控制) -->
+        <div id="input-area">
+            <input type="text" id="suggestion-input" placeholder="在影子的深處，你正想著..." autocomplete="off" enterkeyhint="send" inputmode="text">
+            <button id="submit-btn" onclick="sendSuggestion()">送出</button>
         </div>
         
         <div id="inventory-display" style="margin-top: 10px; font-size: 0.8rem; color: #555;">
@@ -288,9 +265,10 @@
     <!-- 結局全螢幕覆蓋層 -->
     <div id="ending-screen" style="
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: #000; z-index: 9999; display: none; 
-        flex-direction: column; align-items: center; justify-content: center;
-        opacity: 0; transition: opacity 3s ease-in-out;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,1) 50%);
+        z-index: 9999; display: none; 
+        flex-direction: column; align-items: center; justify-content: flex-start;
+        opacity: 0; transition: opacity 4s ease-in-out;
         padding: 0; box-sizing: border-box; overflow-y: auto;
     ">
         <!-- 背景雨絲效果 -->
@@ -301,7 +279,7 @@
             </svg>
         </div>
 
-        <div style="max-width:720px; width:90%; padding:80px 40px; text-align:center; position:relative;">
+        <div style="max-width:720px; width:90%; padding: 45vh 40px 120px; text-align:center; position:relative;">
             
             <!-- 裝飾線 -->
             <div style="width:1px; height:60px; background:linear-gradient(transparent,rgba(255,255,255,0.3)); margin:0 auto 30px;"></div>
@@ -472,6 +450,7 @@
                 if (skipBtn) skipBtn.style.display = 'none';
 
                 video.src = "assets/2.0.mp4";
+                video.load();
                 video.loop = true;
                 video.play();
                 window.introFinished = true;
@@ -494,7 +473,7 @@
         }
     </script>
     <!-- 工程監控面板 (Debug Panel) -->
-    <div id="debug-toggle" onclick="toggleDebug()">📜 NARRATIVE LOG</div>
+    <div id="debug-toggle" onclick="toggleDebug()">NARRATIVE LOG</div>
     <div id="debug-panel">
         <h3>NARRATIVE LOG & MONITOR</h3>
         <div class="debug-item"><span>PROGRESS:</span> <span id="debug-progress">1/6</span></div>
@@ -520,7 +499,6 @@
             <button onclick="sendDevCommand('/dev stage 1')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 跳至第一個解謎 (Stage 1) ]</button>
             <button onclick="sendDevCommand('/dev stage 2')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 跳至第二個解謎 (Stage 2) ]</button>
             <button onclick="sendDevCommand('/dev stage 3')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 跳至第三個解謎 (Stage 3) ]</button>
-            <button onclick="sendDevCommand('/dev stage 4')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 跳至第四個解謎 (Stage 4) ]</button>
             <button onclick="sendDevCommand('/dev fear 10')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 恐懼值 10% (冷靜) ]</button>
             <button onclick="sendDevCommand('/dev fear 95')" style="background:#222; color:white; border:1px solid #555; padding:5px; cursor:pointer;">[ 恐懼值 95% (崩潰) ]</button>
         </div>
@@ -538,6 +516,6 @@
         </div>
     </div>
 
-    <script src="game.js"></script>
+    <script src="game.js?v=5.2"></script>
 </body>
 </html>
